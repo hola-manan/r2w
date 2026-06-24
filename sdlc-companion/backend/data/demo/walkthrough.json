@@ -1,0 +1,47 @@
+{
+  "title": "Customer feedback portal (vague business request)",
+  "request": "We need a way for our customers to send us feedback and for our team to act on it. Right now feedback is scattered across email and calls and we lose track of it.",
+  "stages": [
+    {
+      "stage": 1,
+      "persona": "business_user",
+      "messages": [
+        "We need a way for customers to send us feedback and for our team to act on it. Today it's scattered across email and calls and we lose track.",
+        "Customers are external end-users; the team are internal support agents. Feedback should be searchable and have a status (new, in-progress, resolved).",
+        "Success = 90% of feedback triaged within 24h, and nothing falls through the cracks. Must keep customer data compliant with our policies."
+      ]
+    },
+    {
+      "stage": 2,
+      "persona": "business_user",
+      "messages": [
+        "Draft the PRD items from these requirements, with acceptance criteria and priorities."
+      ]
+    },
+    {
+      "stage": 3,
+      "persona": "tech_architect",
+      "messages": [
+        "Propose the technology stack for this, grounded in our company profile."
+      ]
+    },
+    {
+      "stage": 4,
+      "persona": "tech_architect",
+      "messages": [
+        "Turn the PRD and ADRs into spec components with interfaces and a data model."
+      ]
+    },
+    {
+      "stage": 5,
+      "persona": "tech_architect",
+      "messages": [
+        "Break the spec into epics, tasks, estimates, and dependencies."
+      ]
+    }
+  ],
+  "profile_swap": {
+    "note": "Run the same request under 'eu-fintech' and 'startup-web'. A real-time/notification need is satisfiable with Firebase/Pusher under startup-web (Adopt), but is blocked under eu-fintech (Firebase is Hold, data must stay in EU) — producing a different, internally-consistent stack and a conflict escalation.",
+    "probe_message": "We also want instant real-time notifications to agents using Firebase Realtime DB."
+  }
+}

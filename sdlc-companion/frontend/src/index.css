@@ -1,0 +1,37 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html,
+body,
+#root {
+  height: 100%;
+}
+body {
+  @apply bg-ink text-slate-200;
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+@layer components {
+  .card {
+    @apply rounded-lg border border-line bg-ink-panel p-4;
+  }
+  .btn {
+    @apply rounded-md border border-line px-3 py-1.5 text-sm font-medium transition;
+  }
+  .btn:hover {
+    @apply border-accent/60;
+  }
+  .btn-primary {
+    @apply bg-accent-dim text-white border-transparent hover:brightness-110;
+  }
+  .btn:disabled {
+    @apply opacity-40 cursor-not-allowed hover:border-line;
+  }
+  .chip {
+    @apply inline-flex items-center gap-1 rounded-full border border-line bg-ink-soft px-2 py-0.5 text-xs;
+  }
+  .input {
+    @apply w-full rounded-md border border-line bg-ink-soft px-3 py-2 text-sm outline-none focus:border-accent;
+  }
+}

@@ -1,0 +1,46 @@
+{
+  "id": "eu-fintech",
+  "name": "EU-Regulated Fintech",
+  "radar": [
+    { "name": "Python", "category": "language", "ring": "adopt", "notes": "primary backend language" },
+    { "name": "Go", "category": "language", "ring": "trial", "notes": "for high-throughput services" },
+    { "name": "Rust", "category": "language", "ring": "hold", "notes": "not enough in-house expertise" },
+
+    { "name": "FastAPI", "category": "backend_framework", "ring": "adopt", "notes": "team standard" },
+    { "name": "Django", "category": "backend_framework", "ring": "adopt", "notes": "for admin-heavy apps" },
+    { "name": "Flask", "category": "backend_framework", "ring": "trial", "notes": "legacy only" },
+
+    { "name": "React", "category": "frontend", "ring": "adopt", "notes": "team standard" },
+    { "name": "Vue", "category": "frontend", "ring": "trial", "notes": "isolated apps only" },
+    { "name": "Angular", "category": "frontend", "ring": "hold", "notes": "being phased out" },
+
+    { "name": "PostgreSQL", "category": "datastore", "ring": "adopt", "notes": "managed, EU region pinned" },
+    { "name": "MySQL", "category": "datastore", "ring": "trial", "notes": "legacy systems" },
+    { "name": "DynamoDB", "category": "datastore", "ring": "hold", "notes": "data residency concerns" },
+    { "name": "MongoDB", "category": "datastore", "ring": "hold", "notes": "not approved for PII" },
+
+    { "name": "AWS (eu-central)", "category": "cloud", "ring": "adopt", "notes": "EU region mandatory" },
+    { "name": "GCP", "category": "cloud", "ring": "trial", "notes": "analytics workloads only" },
+    { "name": "Azure", "category": "cloud", "ring": "hold", "notes": "no contract" },
+
+    { "name": "OAuth2 / OIDC", "category": "auth", "ring": "adopt", "notes": "standard" },
+    { "name": "Auth0", "category": "auth", "ring": "adopt", "notes": "managed identity" },
+    { "name": "Custom JWT", "category": "auth", "ring": "trial", "notes": "discouraged" },
+
+    { "name": "RabbitMQ", "category": "messaging", "ring": "adopt", "notes": "managed broker" },
+    { "name": "Kafka", "category": "messaging", "ring": "trial", "notes": "high-volume events" },
+    { "name": "AWS SQS", "category": "messaging", "ring": "trial", "notes": "simple queues" },
+
+    { "name": "Redis", "category": "cache", "ring": "adopt", "notes": "managed ElastiCache" },
+
+    { "name": "WebSocket (managed)", "category": "realtime", "ring": "adopt", "notes": "self-hosted gateway" },
+    { "name": "Firebase Realtime DB", "category": "realtime", "ring": "hold", "notes": "data leaves EU / third-party" }
+  ],
+  "compliance": [
+    { "id": "COMP-1", "rule": "All PII must be stored and processed in the EU region", "scope": "data-residency", "hard_constraint": true },
+    { "id": "COMP-2", "rule": "No third-party LLM or SaaS may receive customer data", "scope": "data-sharing", "hard_constraint": true },
+    { "id": "COMP-3", "rule": "Every data mutation must be written to an immutable audit log", "scope": "auditability", "hard_constraint": true },
+    { "id": "COMP-4", "rule": "Data must be encrypted at rest and in transit", "scope": "security", "hard_constraint": true },
+    { "id": "COMP-5", "rule": "Prefer managed services to reduce operational risk", "scope": "operations", "hard_constraint": false }
+  ]
+}

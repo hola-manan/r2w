@@ -1,0 +1,43 @@
+{
+  "id": "startup-web",
+  "name": "Fast-Moving Startup",
+  "radar": [
+    { "name": "TypeScript", "category": "language", "ring": "adopt", "notes": "default everywhere" },
+    { "name": "Python", "category": "language", "ring": "adopt", "notes": "data + backend" },
+    { "name": "Go", "category": "language", "ring": "trial", "notes": "perf-critical bits" },
+
+    { "name": "Next.js", "category": "backend_framework", "ring": "adopt", "notes": "fullstack default" },
+    { "name": "Express", "category": "backend_framework", "ring": "adopt", "notes": "lightweight APIs" },
+    { "name": "FastAPI", "category": "backend_framework", "ring": "adopt", "notes": "python services" },
+
+    { "name": "React", "category": "frontend", "ring": "adopt", "notes": "team standard" },
+    { "name": "Svelte", "category": "frontend", "ring": "trial", "notes": "marketing pages" },
+
+    { "name": "PostgreSQL", "category": "datastore", "ring": "adopt", "notes": "primary DB" },
+    { "name": "SQLite", "category": "datastore", "ring": "adopt", "notes": "edge / prototypes" },
+    { "name": "MongoDB", "category": "datastore", "ring": "adopt", "notes": "flexible documents" },
+    { "name": "DynamoDB", "category": "datastore", "ring": "trial", "notes": "serverless scale" },
+
+    { "name": "Vercel", "category": "cloud", "ring": "adopt", "notes": "frontend + serverless" },
+    { "name": "AWS", "category": "cloud", "ring": "adopt", "notes": "backend services" },
+    { "name": "Fly.io", "category": "cloud", "ring": "trial", "notes": "cheap global compute" },
+
+    { "name": "Clerk", "category": "auth", "ring": "adopt", "notes": "drop-in auth" },
+    { "name": "Auth0", "category": "auth", "ring": "adopt", "notes": "enterprise SSO" },
+    { "name": "NextAuth", "category": "auth", "ring": "adopt", "notes": "self-hosted" },
+
+    { "name": "AWS SQS", "category": "messaging", "ring": "trial", "notes": "simple async" },
+    { "name": "Kafka", "category": "messaging", "ring": "hold", "notes": "too heavy for us" },
+
+    { "name": "Redis", "category": "cache", "ring": "adopt", "notes": "Upstash managed" },
+
+    { "name": "WebSocket", "category": "realtime", "ring": "adopt", "notes": "in-house" },
+    { "name": "Firebase Realtime DB", "category": "realtime", "ring": "adopt", "notes": "fast to ship" },
+    { "name": "Pusher", "category": "realtime", "ring": "adopt", "notes": "managed channels" }
+  ],
+  "compliance": [
+    { "id": "COMP-1", "rule": "Support GDPR data deletion on user request", "scope": "privacy", "hard_constraint": true },
+    { "id": "COMP-2", "rule": "Secrets live in env/secret manager, never in code", "scope": "security", "hard_constraint": true },
+    { "id": "COMP-3", "rule": "Prefer serverless / managed to ship fast", "scope": "operations", "hard_constraint": false }
+  ]
+}
