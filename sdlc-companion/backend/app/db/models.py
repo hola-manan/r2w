@@ -58,7 +58,9 @@ class NodeRow(Base):
 class EdgeRow(Base):
     __tablename__ = "edges"
     __table_args__ = (
-        UniqueConstraint("from_id", "to_id", "edge_type", name="uq_edge"),
+        # Node IDs (REQ-1, ...) are unique only within a project, so the same
+        # (from, to, edge) triple legitimately recurs across projects.
+        UniqueConstraint("project_id", "from_id", "to_id", "edge_type", name="uq_edge"),
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)

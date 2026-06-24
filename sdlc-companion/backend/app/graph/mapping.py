@@ -27,3 +27,7 @@ def to_model(row: NodeRow) -> Envelope:
 
 def payload_of(node: Envelope) -> dict:
     return node.model_dump(mode="json")
+
+
+# Contract alias (P02 names the pair `to_model` / `from_model`).
+from_model = payload_of

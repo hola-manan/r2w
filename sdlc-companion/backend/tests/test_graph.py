@@ -129,3 +129,51 @@ def test_ids_are_unique_per_project_not_global():
         r2 = GraphRepository(s, p2.id).upsert(Requirement(statement="b"))
         # Same legible ID in two projects, no collision.
         assert r1.id == r2.id == "REQ-1"
+
+
+def test_same_edge_triple_in_two_projects_does_not_collide():
+    """Edge IDs are per-project: the same (from, to, edge) triple must be writable
+    in two projects in one DB (the profile-swap demo, design §11)."""
+    with session_scope() as s:
+        p1 = create_project(s, "one")
+        p2 = create_project(s, "two")
+        for pid in (p1.id, p2.id):
+            repo = GraphRepository(s, pid)
+            repo.upsert(Requirement(statement="r"))
+            repo.upsert(PRDItem(title="t"))
+            repo.link("PRD-1", "REQ-1", EdgeType.DERIVES_FROM)
+        # Each project sees exactly its own edge, no IntegrityError.
+        for pid in (p1.id, p2.id):
+            inbound = GraphRepository(s, pid).neighbors("REQ-1", direction="in")
+            assert [n.id for n in inbound] == ["PRD-1"]
+
+
+def test_upsert_rejects_type_id_mismatch():
+    with session_scope() as s:
+        repo, _ = _repo(s)
+        repo.upsert(Requirement(statement="r"))  # REQ-1
+        # A Task carrying an existing REQ id must not overwrite that node.
+        with pytest.raises(ValueError):
+            repo.upsert(Task(id="REQ-1", title="oops"))
+
+
+def test_clear_stale_resets_flag():
+    with session_scope() as s:
+        repo, _ = _repo(s)
+        adr = repo.upsert(ADR(decision="d", chosen="Postgres"))
+        repo.set_stale(adr.id, True)
+        repo.clear_stale(adr.id)
+        assert repo.get(adr.id).stale is False
+
+
+def test_bfs_path_edges_keep_true_orientation():
+    """An incoming edge must be recorded in its real (from, to) direction."""
+    with session_scope() as s:
+        repo, _ = _repo(s)
+        req = repo.upsert(Requirement(statement="r"))
+        prd = repo.upsert(PRDItem(title="t"))
+        repo.link(prd.id, req.id, EdgeType.DERIVES_FROM)  # PRD -> REQ
+        # Walking inbound from REQ reaches PRD, but the edge stays PRD -> REQ.
+        result = bfs(repo, [req.id], direction="in")
+        assert prd.id in result.nodes
+        assert (prd.id, req.id, EdgeType.DERIVES_FROM) in result.path_edges
