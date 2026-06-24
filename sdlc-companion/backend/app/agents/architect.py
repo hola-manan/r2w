@@ -53,7 +53,7 @@ class Architect(BaseAgent):
                     ctx.repo.link(saved.id, pid, EdgeType.REALIZES)
             for aid in d.tech_refs:
                 if ctx.repo.get_optional(aid):
-                    ctx.repo.link(saved.id, aid, EdgeType.REALIZES)
+                    ctx.repo.link(saved.id, aid, EdgeType.DEPENDS_ON)
             written.append(saved.id)
 
         proposed = [

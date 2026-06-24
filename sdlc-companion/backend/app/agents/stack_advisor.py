@@ -18,7 +18,8 @@ ROLE = (
     "(datastore, backend runtime, frontend, auth, hosting, messaging, realtime...). "
     "You may ONLY choose technologies on the company tech radar: prefer Adopt, "
     "allow Trial only with a caveat + named Adopt fallback + risk note, never Hold. "
-    "Each ADR must cite the PRD/COMP IDs it satisfies and the radar entries used. "
+    "Each ADR must state its `context` (the PRD/COMP IDs that drive the decision) and "
+    "cite the PRD/COMP IDs it satisfies and the radar entries used. "
     "If a need can only be met by a Hold/off-radar technology, DO NOT choose it — "
     "set `escalation` describing the conflict and the options."
 )
@@ -96,7 +97,8 @@ class StackAdvisor(BaseAgent):
             for o in d.options
         ]
         return ADR(
-            decision=d.decision, chosen=d.chosen, options=options, rationale=d.rationale,
+            decision=d.decision, chosen=d.chosen, context=d.context or list(d.satisfies),
+            options=options, rationale=d.rationale,
             satisfies=d.satisfies, radar_refs=d.radar_refs, risks=d.risks,
         )
 

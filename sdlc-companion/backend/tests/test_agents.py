@@ -89,6 +89,8 @@ def test_stack_advisor_writes_adopt_with_links():
         adr = repo.get(res.written_ids[0])
         assert adr.chosen == "PostgreSQL"
         assert "PRD-1" in adr.satisfies
+        # context falls back to satisfies when the model omits it (design §14.3 grounding)
+        assert adr.context == ["PRD-1", "COMP-1"]
 
 
 def test_stack_advisor_challenge_supersedes():
@@ -123,6 +125,24 @@ def test_architect_proposes_adr_change_not_direct_write():
         # ADR not directly modified; change is proposed
         assert repo.get("ADR-1").chosen == "PostgreSQL"
         assert res.escalation and res.escalation["proposed_adr_changes"]
+
+
+def test_architect_links_specs_with_correct_edges():
+    """tech_refs (component -> ADR) use DEPENDS_ON; linked_prd use REALIZES."""
+    from app.schemas import EdgeType
+
+    llm = FakeLLM().on("ArchitectOutput", lambda m, s: ArchitectOutput(
+        reply="spec", components=[SpecDraft(name="Svc", linked_prd=["PRD-1"], tech_refs=["ADR-1"])]))
+    with session_scope() as s:
+        p = create_project(s, "d")
+        repo = GraphRepository(s, p.id)
+        repo.upsert(PRDItem(title="x"))
+        repo.upsert(ADR(decision="d", chosen="PostgreSQL"))
+        res = Architect(llm).handle(_ctx(repo, "spec it"))
+        spec_id = res.written_ids[0]
+        edges = {(e.to_id, e.edge_type) for e in repo.edges() if e.from_id == spec_id}
+        assert (spec_id and ("ADR-1", EdgeType.DEPENDS_ON.value) in edges)
+        assert ("PRD-1", EdgeType.REALIZES.value) in edges
 
 
 def test_planner_writes_tasks_with_links():

@@ -25,7 +25,11 @@ def test_id_prefixes():
 
 def test_edge_types_match_design():
     names = {e.value for e in EdgeType}
-    assert names == {"derives_from", "satisfies", "realizes", "constrains", "implements"}
+    # The five design edges (§13.4) plus depends_on (SpecComponent -> ADR), which the
+    # Impact Analyzer needs so an ADR change ripples to dependent spec components.
+    assert names == {
+        "derives_from", "satisfies", "realizes", "constrains", "implements", "depends_on",
+    }
 
 
 def test_artifact_registry_complete():

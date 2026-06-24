@@ -24,4 +24,8 @@ EDGE_MEANING: dict[EdgeType, str] = {
         "A task implements a spec component: the task must still build the component "
         "as specified."
     ),
+    EdgeType.DEPENDS_ON: (
+        "A spec component depends on an ADR decision: the component must remain valid "
+        "under the current decision (its chosen technology and rationale)."
+    ),
 }

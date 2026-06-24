@@ -124,13 +124,38 @@ def test_impact_flags_downstream_after_change():
         adr = repo.upsert(ADR(decision="Use Postgres", chosen="PostgreSQL", satisfies=[prd.id]))
         spec = repo.upsert(SpecComponent(name="DataSvc", linked_prd=[prd.id], tech_refs=[adr.id]))
         repo.link(adr.id, prd.id, EdgeType.SATISFIES)
-        repo.link(spec.id, adr.id, EdgeType.REALIZES)
+        repo.link(spec.id, adr.id, EdgeType.DEPENDS_ON)
 
         analyzer = ImpactAnalyzer(repo, ConsistencyChecker(llm))
         report = analyzer.analyze([adr.id])
         flagged = {i.node_id for i in report.items}
         assert spec.id in flagged
         assert repo.get(spec.id).stale is True
+
+
+def test_impact_uses_depends_on_edge_meaning():
+    """The component->ADR DEPENDS_ON edge has a registered invariant (no KeyError)."""
+    from app.engines.edge_semantics import EDGE_MEANING
+
+    assert EdgeType.DEPENDS_ON in EDGE_MEANING
+
+    captured: dict[str, str] = {}
+
+    def edge(msgs, schema):
+        captured["prompt"] = msgs[0]["content"]
+        return Verdict(status="stale", justification="ADR-1 changed", evidence=["SPEC-1"])
+
+    llm = FakeLLM().on("Verdict", edge)
+    with session_scope() as s:
+        repo = _repo(s)
+        adr = repo.upsert(ADR(decision="Use Postgres", chosen="PostgreSQL"))
+        spec = repo.upsert(SpecComponent(name="DataSvc", tech_refs=[adr.id]))
+        repo.link(spec.id, adr.id, EdgeType.DEPENDS_ON)
+
+        report = ImpactAnalyzer(repo, ConsistencyChecker(llm)).analyze([adr.id])
+        assert {i.node_id for i in report.items} == {spec.id}
+        # the checker was handed the depends-on invariant, not the realizes one
+        assert "depends on an ADR decision" in captured["prompt"]
 
 
 def test_impact_no_false_positive_when_valid():

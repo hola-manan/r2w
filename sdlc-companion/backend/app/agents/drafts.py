@@ -47,6 +47,7 @@ class ADRDraft(BaseModel):
     decision: str
     category: str = ""
     chosen: str
+    context: list[str] = Field(default_factory=list)  # PRD / COMP ids driving the decision
     options: list[ADROptionDraft] = Field(default_factory=list)
     rationale: str = ""
     satisfies: list[str] = Field(default_factory=list)  # PRD / COMP ids

@@ -94,3 +94,14 @@ Covers the design's acceptance checks: the **gate test** (a vague requirement is
 the right follow-up), the **constraint test** (a Hold technology is blocked), the **impact
 test** (a change flags the correct downstream nodes), the **traceability invariant**, and
 the **profile-swap** divergence.
+
+## Known limitations (PoC)
+- **No token-level chat streaming.** The WebSocket (`/projects/{id}/ws`) pushes discrete
+  typed events — `reply`, `artifact_upserted`, `scorecard`, `impact_diff`, `escalation`,
+  `needs_review`, `done` — but the assistant `reply` arrives as one message, not streamed
+  tokens. The agents produce *structured* outputs (`llm.structured`) so the whole artifact
+  is validated before it's written; that is fundamentally incompatible with token-by-token
+  streaming, so the reply is emitted once the turn completes.
+- **Readiness rescoring is whole-stage, not incremental.** Each turn rescores the active
+  stage's full rubric rather than only the changed nodes. It's correct and fast enough for a
+  single-operator PoC.
