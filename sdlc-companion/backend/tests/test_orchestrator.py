@@ -9,7 +9,6 @@ from app.engines import ConsistencyChecker, Verdict
 from app.graph import GraphRepository, create_project
 from app.orchestrator import (
     Conductor,
-    GateNotPassed,
     PersonaViolation,
     ProposedPatch,
     advance,
@@ -21,7 +20,7 @@ from app.orchestrator import (
 )
 from app.orchestrator.blackboard import BlackboardViolation
 from app.orchestrator.types import AgentContext, AgentResult
-from app.schemas import DocumentType, GateStatus, PRDItem, Persona, Requirement
+from app.schemas import DocumentType, GateStatus, Persona, PRDItem, Requirement
 from tests.fake_llm import FakeLLM
 
 

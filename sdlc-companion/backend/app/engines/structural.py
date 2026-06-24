@@ -72,7 +72,9 @@ def radar_compliance(repo: GraphRepository, retriever: ProfileRetriever | None) 
     ), "Re-select an Adopt/Trial technology from the radar for the flagged ADRs."
 
 
-def compliance_satisfaction(repo: GraphRepository, retriever: ProfileRetriever | None) -> CheckResult:
+def compliance_satisfaction(
+    repo: GraphRepository, retriever: ProfileRetriever | None
+) -> CheckResult:
     adrs = _accepted_adrs(repo)
     if retriever is None:
         return 0, [], "No profile loaded.", None
@@ -80,7 +82,8 @@ def compliance_satisfaction(repo: GraphRepository, retriever: ProfileRetriever |
     if not hard:
         return 3, [], "No hard compliance constraints to satisfy.", None
     if not adrs:
-        return 0, [], "No accepted ADRs to satisfy constraints.", "Author ADRs that satisfy compliance constraints."
+        return (0, [], "No accepted ADRs to satisfy constraints.",
+                "Author ADRs that satisfy compliance constraints.")
     satisfied = {s for a in adrs for s in a.satisfies}
     uncovered = check_constraints(retriever, list(satisfied))
     level = _ratio_level(len(hard) - len(uncovered), len(hard))
@@ -172,7 +175,8 @@ def estimate_presence(repo: GraphRepository, retriever: ProfileRetriever | None)
     level = _ratio_level(len(tasks) - len(missing), len(tasks))
     if not missing:
         return 3, [], "Every task carries an estimate.", None
-    return level, missing, f"Tasks missing estimates: {', '.join(missing)}.", "Add estimates to the flagged tasks."
+    return (level, missing, f"Tasks missing estimates: {', '.join(missing)}.",
+            "Add estimates to the flagged tasks.")
 
 
 REGISTRY = {

@@ -17,6 +17,9 @@ class Settings(BaseSettings):
     anthropic_api_key: str = ""
     anthropic_model: str = "claude-sonnet-4-6"
     db_path: str = "./data/project.db"
+    # Per-request timeout (seconds) for the Anthropic client; guards single-threaded
+    # PoC requests against a hung/slow API call.
+    request_timeout: float = 60.0
     # Comma-separated list of allowed CORS origins for the Vite dev server.
     cors_origins: str = "http://localhost:5173"
 

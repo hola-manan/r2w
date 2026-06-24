@@ -34,7 +34,7 @@ def test_edge_types_match_design():
 
 def test_artifact_registry_complete():
     assert set(ARTIFACT_MODELS) == set(DocumentType)
-    for doc_type, model in ARTIFACT_MODELS.items():
+    for doc_type, _model in ARTIFACT_MODELS.items():
         assert prefix_for(doc_type)
 
 

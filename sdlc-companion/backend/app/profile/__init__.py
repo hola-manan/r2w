@@ -1,6 +1,6 @@
-from .schema import CompanyProfile, ComplianceRule, RadarEntry
 from .loader import list_profile_ids, load_profile, profiles_dir
 from .retriever import ProfileRetriever
+from .schema import CompanyProfile, ComplianceRule, RadarEntry
 from .validation import (
     ChoiceCheck,
     check_constraints,

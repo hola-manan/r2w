@@ -14,10 +14,9 @@ from app.graph import GraphRepository
 from app.orchestrator.blackboard import ProposedPatch, apply_patch
 from app.orchestrator.brief import update_brief
 from app.orchestrator.state import (
+    STAGE_OF_TYPE,
     Message,
     ProjectState,
-    STAGE_OF_TYPE,
-    persona_for_stage,
 )
 from app.orchestrator.state_machine import advance, assert_persona, reopen
 from app.orchestrator.types import Agent, AgentContext, AgentResult

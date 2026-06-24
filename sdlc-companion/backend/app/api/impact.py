@@ -37,7 +37,9 @@ def run_impact(project_id: str, body: RunImpact, session: Session = Depends(get_
 
 
 @router.post("/projects/{project_id}/impact/accept")
-def accept_patch(project_id: str, body: AcceptPatch, session: Session = Depends(get_session)) -> dict:
+def accept_patch(
+    project_id: str, body: AcceptPatch, session: Session = Depends(get_session)
+) -> dict:
     a = build_conductor(session, project_id)
     patch = ProposedPatch(
         target_id=body.target_id,

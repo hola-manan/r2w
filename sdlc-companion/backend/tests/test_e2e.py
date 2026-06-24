@@ -28,7 +28,7 @@ from app.engines import Verdict
 from app.graph import GraphRepository, create_project
 from app.orchestrator.types import AgentContext
 from app.profile import ProfileRetriever, load_profile
-from app.schemas import PRDItem, Persona
+from app.schemas import Persona, PRDItem
 from tests.fake_llm import FakeLLM
 
 
@@ -80,7 +80,8 @@ def client():
 
 
 def test_full_walkthrough_reaches_task_plan_with_traceability(client):
-    pid = client.post("/projects", json={"name": "Feedback", "profile_id": "eu-fintech"}).json()["id"]
+    resp = client.post("/projects", json={"name": "Feedback", "profile_id": "eu-fintech"})
+    pid = resp.json()["id"]
     plan = [
         (1, "business_user", "customers send feedback, team triages it"),
         (2, "business_user", "draft the PRD"),
@@ -93,7 +94,9 @@ def test_full_walkthrough_reaches_task_plan_with_traceability(client):
                            json={"message": msg, "persona": persona}).json()
         assert "scorecard" in turn
         adv = client.post(f"/projects/{pid}/advance").json()
-        assert adv["advanced"] is True, f"stage {stage} gate did not pass: {turn['scorecard']['blockers']}"
+        assert adv["advanced"] is True, (
+            f"stage {stage} gate did not pass: {turn['scorecard']['blockers']}"
+        )
 
     proj = client.get(f"/projects/{pid}").json()
     assert proj["gate_status"]["5"] == "passed"

@@ -1,6 +1,8 @@
 """P02 verification: CRUD, edges, traversal, versioning, stale, round-trip."""
 from __future__ import annotations
 
+from datetime import datetime, timezone
+
 import pytest
 
 from app.db.base import Base
@@ -60,6 +62,19 @@ def test_set_stale_persists_in_column_and_payload():
         adr = repo.upsert(ADR(decision="Use Postgres", chosen="Postgres"))
         repo.set_stale(adr.id, True)
         assert repo.get(adr.id).stale is True
+
+
+def test_last_changed_sourced_from_column_after_column_only_write():
+    """set_stale touches the column but not the payload; to_model must still
+    return the authoritative column value for last_changed."""
+    with session_scope() as s:
+        repo, _ = _repo(s)
+        adr = repo.upsert(ADR(decision="Use Postgres", chosen="Postgres"))
+        row = repo._row(adr.id)
+        row.last_changed = datetime(2020, 1, 1, tzinfo=timezone.utc)
+        s.flush()
+        repo.set_stale(adr.id, True)  # column-only write, leaves payload's last_changed alone
+        assert repo.get(adr.id).last_changed == datetime(2020, 1, 1, tzinfo=timezone.utc)
 
 
 def test_bfs_reaches_prd_and_adr_from_spec():

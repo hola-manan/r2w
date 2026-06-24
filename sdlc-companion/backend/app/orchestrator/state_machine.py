@@ -5,7 +5,7 @@ model) and sets downstream needs_review; persona/stage validity enforced.
 """
 from __future__ import annotations
 
-from app.orchestrator.state import ProjectState, STAGES, persona_for_stage
+from app.orchestrator.state import STAGES, ProjectState, persona_for_stage
 from app.schemas import GateStatus, Persona
 
 

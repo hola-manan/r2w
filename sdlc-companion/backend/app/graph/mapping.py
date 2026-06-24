@@ -19,6 +19,7 @@ def to_model(row: NodeRow) -> Envelope:
         doc_type=doc_type.value,
         version=row.version,
         created_by_agent=row.created_by_agent,
+        last_changed=row.last_changed,
         stale=row.stale,
     )
     return model_cls.model_validate(data)

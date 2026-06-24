@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import pytest
 
-from app.agents import Architect, PRDAuthor, Planner, RequirementsAnalyst, StackAdvisor
+from app.agents import Architect, Planner, PRDAuthor, RequirementsAnalyst, StackAdvisor
 from app.agents.drafts import (
     ADRDraft,
     ArchitectOutput,
@@ -21,7 +21,7 @@ from app.db.session import get_engine, init_db, session_scope
 from app.graph import GraphRepository, create_project
 from app.orchestrator.types import AgentContext
 from app.profile import ProfileRetriever, load_profile
-from app.schemas import ADR, DocumentType, PRDItem, Persona, Requirement, SpecComponent
+from app.schemas import ADR, DocumentType, Persona, PRDItem, Requirement, SpecComponent
 from tests.fake_llm import FakeLLM
 
 
@@ -132,7 +132,8 @@ def test_architect_links_specs_with_correct_edges():
     from app.schemas import EdgeType
 
     llm = FakeLLM().on("ArchitectOutput", lambda m, s: ArchitectOutput(
-        reply="spec", components=[SpecDraft(name="Svc", linked_prd=["PRD-1"], tech_refs=["ADR-1"])]))
+        reply="spec",
+        components=[SpecDraft(name="Svc", linked_prd=["PRD-1"], tech_refs=["ADR-1"])]))
     with session_scope() as s:
         p = create_project(s, "d")
         repo = GraphRepository(s, p.id)
@@ -147,7 +148,8 @@ def test_architect_links_specs_with_correct_edges():
 
 def test_planner_writes_tasks_with_links():
     llm = FakeLLM().on("PlannerOutput", lambda m, s: PlannerOutput(
-        reply="planned", tasks=[TaskDraft(title="build svc", estimate="2d", linked_spec=["SPEC-1"])]))
+        reply="planned",
+        tasks=[TaskDraft(title="build svc", estimate="2d", linked_spec=["SPEC-1"])]))
     with session_scope() as s:
         p = create_project(s, "d")
         repo = GraphRepository(s, p.id)

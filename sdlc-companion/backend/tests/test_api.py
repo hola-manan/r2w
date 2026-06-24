@@ -4,12 +4,12 @@ from __future__ import annotations
 import pytest
 from fastapi.testclient import TestClient
 
+from app.agents.drafts import PRDAuthorOutput, PRDDraft, ReqAnalystOutput, ReqDraft
 from app.api import deps
 from app.db.base import Base
 from app.db.session import get_engine, init_db
 from app.engines import Verdict
 from app.engines.consistency_checker import ConsistencyChecker  # noqa: F401
-from app.agents.drafts import PRDAuthorOutput, PRDDraft, ReqAnalystOutput, ReqDraft
 from tests.fake_llm import FakeLLM
 
 

@@ -1,0 +1,23 @@
+# Backend dev tooling (P01). Dependencies live in requirements.txt; the backend
+# is run from source (not installed), so no build-system/[project] table here.
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+# Pragmatic set: pycodestyle errors/warnings, pyflakes, import sorting, bugbear.
+# pyupgrade (UP) is intentionally omitted to avoid a large stylistic rewrite of the
+# existing Optional[...] / (str, Enum) idioms.
+select = ["E", "F", "I", "W", "B"]
+
+[tool.ruff.lint.flake8-bugbear]
+# FastAPI's dependency-injection markers are designed to be call defaults.
+extend-immutable-calls = ["fastapi.Depends", "fastapi.Query", "fastapi.Path"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+filterwarnings = [
+    "ignore:Using `httpx` with `starlette.testclient` is deprecated:UserWarning",
+]
