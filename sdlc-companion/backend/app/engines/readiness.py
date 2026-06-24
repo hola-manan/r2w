@@ -6,11 +6,12 @@ Design doc §13.1-13.3.
 """
 from __future__ import annotations
 
+import hashlib
 from typing import Optional
 
 from pydantic import BaseModel, Field
 
-from app.engines.consistency_checker import ConsistencyChecker
+from app.engines.consistency_checker import ConsistencyChecker, Verdict
 from app.engines.rendering import stage_context
 from app.engines.rubrics import STAGES
 from app.engines.structural import REGISTRY as STRUCTURAL
@@ -19,6 +20,20 @@ from app.profile import ProfileRetriever
 
 # level (0-3) -> RAG label for the UI
 RAG = {0: "red", 1: "amber", 2: "amber", 3: "green"}
+
+# Incremental scoring (manatee-04 §3): qualitative dimensions are scored by the LLM
+# at temperature 0, so score_dimension(dim, context) is a pure function of (llm, input)
+# and `context` is the complete input. We memoize the Verdict keyed on the exact input,
+# so repeated scoring of an unchanged stage (e.g. the readiness poll endpoint) does not
+# re-invoke the LLM. Any artifact change alters `context` -> new key -> miss. The key is
+# scoped to the LLM instance: production's get_llm() is an lru_cached singleton (stable
+# id, so the cache persists across requests), while distinct clients never share verdicts.
+# PoC cache is unbounded (single operator); a bounded LRU is the production follow-up.
+_VERDICT_CACHE: dict[tuple[int, str, int, str, str], Verdict] = {}
+
+
+def clear_readiness_cache() -> None:
+    _VERDICT_CACHE.clear()
 
 
 class DimensionResult(BaseModel):
@@ -57,6 +72,7 @@ class ReadinessEngine:
         rubric = STAGES[stage]
         profile_summary = self.retriever.summary() if self.retriever else ""
         context = stage_context(self.repo, stage, profile_summary)
+        context_hash = hashlib.sha256(context.encode("utf-8")).hexdigest()
 
         results: list[DimensionResult] = []
         for dim, kind in rubric.iter_dims():
@@ -65,7 +81,7 @@ class ReadinessEngine:
                     self.repo, self.retriever
                 )
             else:
-                verdict = self.checker.score_dimension(dim, context)
+                verdict = self._score_dimension_cached(dim, context, stage, context_hash)
                 level = verdict.level if verdict.level is not None else 0
                 evidence = verdict.evidence
                 justification = verdict.justification
@@ -87,7 +103,7 @@ class ReadinessEngine:
 
         # weighted soft aggregate in [0,1]
         total_w = sum(w for _d, w in rubric.soft) or 1.0
-        weighted = sum(rubric.weight_of(d.key) * (by_key[d.key].level / 3) for d, _w in rubric.soft)
+        weighted = sum(w * (by_key[d.key].level / 3) for d, w in rubric.soft)
         weighted_soft = weighted / total_w
 
         hard_results = [r for r in results if r.kind == "hard"]
@@ -105,3 +121,12 @@ class ReadinessEngine:
             blockers=blockers,
             followups=followups,
         )
+
+    def _score_dimension_cached(self, dim, context: str, stage: int, context_hash: str) -> Verdict:
+        key = (id(self.checker.llm), self.repo.project_id, stage, dim.key, context_hash)
+        cached = _VERDICT_CACHE.get(key)
+        if cached is not None:
+            return cached
+        verdict = self.checker.score_dimension(dim, context)
+        _VERDICT_CACHE[key] = verdict
+        return verdict

@@ -63,6 +63,36 @@ def test_stage1_gate_passes_when_all_green():
         assert card.blockers == []
 
 
+def test_readiness_caches_unchanged_stage():
+    """manatee-04 §3 incremental: re-scoring an unchanged stage hits the verdict
+    cache and does not re-invoke the LLM."""
+    llm = _all_green_llm()
+    with session_scope() as s:
+        repo = _repo(s)
+        repo.upsert(Requirement(statement="clear, testable, scoped requirement"))
+        engine = ReadinessEngine(repo, ConsistencyChecker(llm))
+        card1 = engine.score(1)
+        n_after_first = len(llm.calls)
+        assert n_after_first > 0  # qualitative dims hit the LLM the first time
+        card2 = engine.score(1)  # nothing changed
+        assert len(llm.calls) == n_after_first  # no new LLM calls
+        assert card1 == card2
+
+
+def test_readiness_cache_invalidates_on_change():
+    llm = _all_green_llm()
+    with session_scope() as s:
+        repo = _repo(s)
+        repo.upsert(Requirement(statement="first requirement"))
+        engine = ReadinessEngine(repo, ConsistencyChecker(llm))
+        engine.score(1)
+        n1 = len(llm.calls)
+        # A new artifact changes the stage context -> cache misses -> re-scored.
+        repo.upsert(Requirement(statement="a second, different requirement"))
+        engine.score(1)
+        assert len(llm.calls) > n1
+
+
 def test_stage2_traceability_is_deterministic_and_blocks():
     """Orphan PRD item (no requirement link) fails the hard traceability gate."""
     with session_scope() as s:
