@@ -1,13 +1,19 @@
 """P03 verification: load, ring ranking, validation, profile divergence."""
 from __future__ import annotations
 
+import json
+
+import pytest
+
 from app.profile import (
+    CompanyProfile,
     ProfileRetriever,
     check_constraints,
     list_profile_ids,
     load_profile,
     validate_choice,
 )
+from app.profile.schema import ComplianceRule, RadarEntry
 from app.schemas import Ring
 
 
@@ -54,3 +60,43 @@ def test_profiles_diverge_for_realtime():
     # Firebase is blocked in fintech but adopted in startup.
     assert validate_choice(eu, "Firebase Realtime DB").allowed is False
     assert validate_choice(startup, "Firebase Realtime DB").allowed is True
+
+
+def test_seed_profiles_validate_cleanly():
+    # The integrity validators must not reject the shipped seeds.
+    for pid in ("eu-fintech", "startup-web"):
+        assert load_profile(pid).id == pid
+
+
+def test_duplicate_radar_names_rejected():
+    with pytest.raises(ValueError, match="duplicate radar entry names"):
+        CompanyProfile(
+            id="x", name="X",
+            radar=[
+                RadarEntry(name="Redis", category="cache", ring=Ring.ADOPT),
+                RadarEntry(name="redis", category="datastore", ring=Ring.ADOPT),
+            ],
+        )
+
+
+def test_duplicate_compliance_ids_rejected():
+    with pytest.raises(ValueError, match="duplicate compliance ids"):
+        CompanyProfile(
+            id="x", name="X",
+            compliance=[
+                ComplianceRule(id="COMP-1", rule="a"),
+                ComplianceRule(id="comp-1", rule="b"),
+            ],
+        )
+
+
+def test_loader_rejects_id_filename_mismatch(tmp_path, monkeypatch):
+    from app.profile import loader
+
+    (tmp_path / "myprof.json").write_text(
+        json.dumps({"id": "different", "name": "X"}), encoding="utf-8"
+    )
+    monkeypatch.setattr(loader, "profiles_dir", lambda: tmp_path)
+    loader.load_profile.cache_clear()
+    with pytest.raises(ValueError, match="does not match its filename"):
+        loader.load_profile("myprof")
