@@ -92,8 +92,9 @@ cd backend && .venv/Scripts/python -m pytest -q
 ```
 Covers the design's acceptance checks: the **gate test** (a vague requirement is held with
 the right follow-up), the **constraint test** (a Hold technology is blocked), the **impact
-test** (a change flags the correct downstream nodes), the **traceability invariant**, and
-the **profile-swap** divergence.
+test** (a change flags the correct downstream nodes), the **traceability invariant**, the
+**profile-swap** divergence, and the **gate re-lock / reconciliation cascade** (a stale node
+holds a passing stage shut until it is reconciled).
 
 ## Known limitations (PoC)
 - **No token-level chat streaming.** The WebSocket (`/projects/{id}/ws`) pushes discrete

@@ -61,6 +61,40 @@ function AdrCard({
   );
 }
 
+function EscalationCard({ escalation }: { escalation: Record<string, unknown> }) {
+  if (escalation.type === "radar_conflict") {
+    const options = (escalation.options as string[]) ?? [];
+    return (
+      <div className="card border-rag-amber/50">
+        <h3 className="text-rag-amber font-medium">Conflict — your call</h3>
+        <p className="text-sm text-slate-300 mt-1">
+          <span className="font-mono text-xs text-accent">{String(escalation.chosen)}</span> can't
+          be used for “{String(escalation.decision)}”: {String(escalation.reason)}
+        </p>
+        <ul className="mt-2 flex flex-wrap gap-1.5">
+          {options.map((o) => (
+            <li key={o} className="chip border-line text-slate-300">
+              {o}
+            </li>
+          ))}
+        </ul>
+        <p className="text-xs text-slate-500 mt-2">
+          Tell the Stack Advisor which path to take in the chat.
+        </p>
+      </div>
+    );
+  }
+  // Unknown escalation shape (e.g. proposed_adr_changes): show it raw.
+  return (
+    <div className="card border-rag-amber/50">
+      <h3 className="text-rag-amber font-medium">Conflict escalation</h3>
+      <pre className="text-xs text-slate-300 whitespace-pre-wrap mt-1">
+        {JSON.stringify(escalation, null, 2)}
+      </pre>
+    </div>
+  );
+}
+
 export default function Stack({
   project,
   onChanged,
@@ -82,14 +116,7 @@ export default function Stack({
       right={
         <div className="space-y-4">
           <Scorecard card={s.scorecard} />
-          {s.escalation && (
-            <div className="card border-rag-amber/50">
-              <h3 className="text-rag-amber font-medium">Conflict escalation</h3>
-              <pre className="text-xs text-slate-300 whitespace-pre-wrap mt-1">
-                {JSON.stringify(s.escalation, null, 2)}
-              </pre>
-            </div>
-          )}
+          {s.escalation && <EscalationCard escalation={s.escalation} />}
           <AdvanceBar
             projectId={project.id}
             stage={3}
