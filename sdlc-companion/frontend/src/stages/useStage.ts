@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from "react";
 import { api } from "../api/client";
 import type {
   Artifact,
+  ImpactItem,
   ImpactReport,
   Scorecard,
 } from "../api/types";
@@ -71,8 +72,26 @@ export function useStage(projectId: string, stage: number) {
     [projectId, stage, refresh],
   );
 
+  // Reconcile one impact item: drop it from the panel and fold in any follow-up
+  // pass returned by accepting a patch (deduped by node id; the follow-up wins).
+  const resolveImpact = useCallback(
+    (resolvedId: string, followUp?: ImpactReport | null) => {
+      setImpact((cur) => {
+        const byId = new Map<string, ImpactItem>();
+        for (const it of cur?.items ?? []) {
+          if (it.node_id !== resolvedId) byId.set(it.node_id, it);
+        }
+        for (const it of followUp?.items ?? []) byId.set(it.node_id, it);
+        const items = [...byId.values()];
+        if (items.length === 0) return null;
+        return { changed: followUp?.changed ?? cur?.changed ?? [], items };
+      });
+    },
+    [],
+  );
+
   return {
     artifacts, scorecard, messages, escalation, impact, busy, error,
-    setImpact, refresh, send,
+    setImpact, resolveImpact, refresh, send,
   };
 }

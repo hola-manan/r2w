@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { api } from "../api/client";
-import type { ImpactItem, ProjectSummary } from "../api/types";
+import type { ImpactItem, ImpactReport, ProjectSummary } from "../api/types";
 import { ArtifactCard } from "../components/ArtifactCard";
 import { Chat } from "../components/Chat";
 import { Scorecard } from "../components/Scorecard";
@@ -15,7 +15,7 @@ function ImpactPanel({
 }: {
   projectId: string;
   items: ImpactItem[];
-  onResolved: () => void;
+  onResolved: (resolvedId: string, followUp?: ImpactReport) => void;
 }) {
   const [busy, setBusy] = useState(false);
   if (items.length === 0) return null;
@@ -23,8 +23,9 @@ function ImpactPanel({
   const accept = async (it: ImpactItem) => {
     setBusy(true);
     try {
-      await api.acceptPatch(projectId, it.node_id, it.doc_type, it.suggested_patch || {});
-      onResolved();
+      // Accepting opens the next pass; fold its newly-flagged neighbors into the panel.
+      const res = await api.acceptPatch(projectId, it.node_id, it.doc_type, it.suggested_patch || {});
+      onResolved(it.node_id, res.impact);
     } finally {
       setBusy(false);
     }
@@ -35,7 +36,7 @@ function ImpactPanel({
     setBusy(true);
     try {
       await api.dismiss(projectId, it.node_id, reason);
-      onResolved();
+      onResolved(it.node_id);
     } finally {
       setBusy(false);
     }
@@ -96,8 +97,8 @@ export default function Spec({
           <ImpactPanel
             projectId={project.id}
             items={s.impact?.items ?? []}
-            onResolved={() => {
-              s.setImpact(null);
+            onResolved={(resolvedId, followUp) => {
+              s.resolveImpact(resolvedId, followUp);
               s.refresh();
               onChanged();
             }}
