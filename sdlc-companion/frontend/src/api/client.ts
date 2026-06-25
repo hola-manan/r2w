@@ -1,5 +1,6 @@
 // Typed REST client over the P07 backend (P08).
 import type {
+  AcceptResult,
   Artifact,
   ConfirmResult,
   GraphData,
@@ -67,7 +68,7 @@ export const api = {
     target_type: string,
     change: Record<string, unknown>,
   ) =>
-    req<Artifact>(`/projects/${id}/impact/accept`, {
+    req<AcceptResult>(`/projects/${id}/impact/accept`, {
       method: "POST",
       body: JSON.stringify({ target_id, target_type, change }),
     }),

@@ -1,7 +1,10 @@
+from .blackboard import OWNER, ProposedPatch, apply_patch, can_apply
+from .brief import update_brief
+from .conductor import Conductor, ConductorResponse, ConfirmResult
 from .state import (
+    STAGE_OF_TYPE,
     Message,
     ProjectState,
-    STAGE_OF_TYPE,
     persona_for_stage,
     stage_name,
 )
@@ -14,10 +17,7 @@ from .state_machine import (
     reopen,
 )
 from .store import load_state, save_state
-from .brief import update_brief
-from .blackboard import OWNER, ProposedPatch, apply_patch, can_apply
 from .types import Agent, AgentContext, AgentResult
-from .conductor import Conductor, ConductorResponse, ConfirmResult
 
 __all__ = [
     "Message",

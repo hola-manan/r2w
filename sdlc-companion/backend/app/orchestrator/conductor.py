@@ -14,10 +14,10 @@ from app.graph import GraphRepository
 from app.orchestrator.blackboard import ProposedPatch, apply_patch
 from app.orchestrator.brief import update_brief
 from app.orchestrator.state import (
+    STAGE_OF_TYPE,
+    TYPE_OF_STAGE,
     Message,
     ProjectState,
-    STAGE_OF_TYPE,
-    persona_for_stage,
 )
 from app.orchestrator.state_machine import advance, assert_persona, reopen
 from app.orchestrator.types import Agent, AgentContext, AgentResult
@@ -36,6 +36,7 @@ class ConfirmResult(BaseModel):
     scorecard: Scorecard
     advanced: bool
     new_stage: int
+    blocked_by_stale: list[str] = []  # node ids holding the gate shut (design §13.5)
 
 
 class Conductor:
@@ -92,12 +93,25 @@ class Conductor:
     def confirm_stage(self, state: ProjectState) -> ConfirmResult:
         stage = state.current_stage
         card = self.readiness.score(stage)
+        # The gate re-locks while the stage holds unreconciled stale nodes, even if the
+        # rubric passes (design §13.5). Reconciling them (accept/dismiss -> clear_stale)
+        # reopens the gate.
+        stale = self._stale_nodes_in_stage(stage)
         advanced = False
-        if card.gate_passed:
+        if card.gate_passed and not stale:
             advance(state, True)
             advanced = True
             update_brief(state, self.repo, self._profile_summary())
-        return ConfirmResult(scorecard=card, advanced=advanced, new_stage=state.current_stage)
+        return ConfirmResult(
+            scorecard=card, advanced=advanced, new_stage=state.current_stage,
+            blocked_by_stale=stale,
+        )
+
+    def _stale_nodes_in_stage(self, stage: int) -> list[str]:
+        doc_type = TYPE_OF_STAGE.get(stage)
+        if doc_type is None:
+            return []
+        return [n.id for n in self.repo.list_by_type(doc_type) if n.stale]
 
     def reopen_stage(self, state: ProjectState, stage: int) -> None:
         reopen(state, stage)

@@ -33,6 +33,9 @@ STAGE_OF_TYPE = {
     DocumentType.TASK: 5,
 }
 
+# Inverse: the artifact type each stage owns (for gate-relock stale checks).
+TYPE_OF_STAGE = {stage: doc_type for doc_type, stage in STAGE_OF_TYPE.items()}
+
 
 def persona_for_stage(stage: int) -> Persona:
     return _STAGE_PERSONA[stage]

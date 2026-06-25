@@ -10,7 +10,6 @@ need a key) can import the rest of the app freely.
 """
 from __future__ import annotations
 
-import json
 from functools import lru_cache
 from typing import Any, Sequence, TypeVar
 
@@ -43,7 +42,10 @@ class LLMClient:
                 ) from exc
             if not self._settings.anthropic_api_key:
                 raise LLMError("ANTHROPIC_API_KEY is not set")
-            self._client = Anthropic(api_key=self._settings.anthropic_api_key)
+            self._client = Anthropic(
+                api_key=self._settings.anthropic_api_key,
+                timeout=self._settings.request_timeout,
+            )
         return self._client
 
     def complete(

@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import pytest
 
-from app.agents import Architect, PRDAuthor, Planner, RequirementsAnalyst, StackAdvisor
+from app.agents import Architect, Planner, PRDAuthor, RequirementsAnalyst, StackAdvisor
 from app.agents.drafts import (
     ADRDraft,
     ArchitectOutput,
@@ -21,7 +21,7 @@ from app.db.session import get_engine, init_db, session_scope
 from app.graph import GraphRepository, create_project
 from app.orchestrator.types import AgentContext
 from app.profile import ProfileRetriever, load_profile
-from app.schemas import ADR, DocumentType, PRDItem, Persona, Requirement, SpecComponent
+from app.schemas import ADR, DocumentType, Persona, PRDItem, Requirement, SpecComponent
 from tests.fake_llm import FakeLLM
 
 
@@ -35,6 +35,51 @@ def _db():
 def _ctx(repo, message, retriever=None):
     return AgentContext(repo=repo, message=message, persona=Persona.BUSINESS_USER,
                         retriever=retriever)
+
+
+def test_agents_inject_their_stage_rubric():
+    """The single rubrics.py source feeds the agent prompt (no divergent rubric prose)."""
+    from app.engines.rubrics import describe_rubric
+
+    system = RequirementsAnalyst(FakeLLM())._system("role", brief="")
+    assert "Clarity" in system and "Testability" in system
+    assert describe_rubric(1) in system
+    # The Planner (stage 5) gets the task-plan rubric instead.
+    assert "Dependency acyclicity" in Planner(FakeLLM())._system("role")
+
+
+def test_requirements_analyst_sets_source_turn():
+    from app.orchestrator.state import Message
+
+    llm = FakeLLM().on("ReqAnalystOutput", lambda m, s: ReqAnalystOutput(
+        reply="ok", requirements=[ReqDraft(statement="Users export CSV")]))
+    with session_scope() as s:
+        p = create_project(s, "d")
+        repo = GraphRepository(s, p.id)
+        ctx = AgentContext(
+            repo=repo, message="export", persona=Persona.BUSINESS_USER,
+            history=[Message(role="user", content="hi"), Message(role="agent", content="?"),
+                     Message(role="user", content="export")],
+        )
+        res = RequirementsAnalyst(llm).handle(ctx)
+        assert repo.get(res.written_ids[0]).source_turn == 2  # two user turns
+
+
+def test_stack_advisor_grounds_radar_refs():
+    retr = ProfileRetriever(load_profile("eu-fintech"))
+    llm = FakeLLM().on("StackAdvisorOutput", lambda m, s: StackAdvisorOutput(
+        reply="ok", adrs=[ADRDraft(decision="datastore", chosen="PostgreSQL",
+                                   satisfies=["PRD-1"],
+                                   radar_refs=["Postgres", "MadeUpDB"])]))
+    with session_scope() as s:
+        p = create_project(s, "d", profile_id="eu-fintech")
+        repo = GraphRepository(s, p.id)
+        repo.upsert(PRDItem(title="store data"))
+        res = StackAdvisor(llm).handle(_ctx(repo, "pick a db", retr))
+        adr = repo.get(res.written_ids[0])
+        # bogus "MadeUpDB" dropped; canonical "PostgreSQL" present (chosen always cited).
+        assert "MadeUpDB" not in adr.radar_refs
+        assert "PostgreSQL" in adr.radar_refs
 
 
 def test_requirements_analyst_writes_requirement():
@@ -89,6 +134,8 @@ def test_stack_advisor_writes_adopt_with_links():
         adr = repo.get(res.written_ids[0])
         assert adr.chosen == "PostgreSQL"
         assert "PRD-1" in adr.satisfies
+        # context falls back to satisfies when the model omits it (design §14.3 grounding)
+        assert adr.context == ["PRD-1", "COMP-1"]
 
 
 def test_stack_advisor_challenge_supersedes():
@@ -125,9 +172,29 @@ def test_architect_proposes_adr_change_not_direct_write():
         assert res.escalation and res.escalation["proposed_adr_changes"]
 
 
+def test_architect_links_specs_with_correct_edges():
+    """tech_refs (component -> ADR) use DEPENDS_ON; linked_prd use REALIZES."""
+    from app.schemas import EdgeType
+
+    llm = FakeLLM().on("ArchitectOutput", lambda m, s: ArchitectOutput(
+        reply="spec",
+        components=[SpecDraft(name="Svc", linked_prd=["PRD-1"], tech_refs=["ADR-1"])]))
+    with session_scope() as s:
+        p = create_project(s, "d")
+        repo = GraphRepository(s, p.id)
+        repo.upsert(PRDItem(title="x"))
+        repo.upsert(ADR(decision="d", chosen="PostgreSQL"))
+        res = Architect(llm).handle(_ctx(repo, "spec it"))
+        spec_id = res.written_ids[0]
+        edges = {(e.to_id, e.edge_type) for e in repo.edges() if e.from_id == spec_id}
+        assert (spec_id and ("ADR-1", EdgeType.DEPENDS_ON.value) in edges)
+        assert ("PRD-1", EdgeType.REALIZES.value) in edges
+
+
 def test_planner_writes_tasks_with_links():
     llm = FakeLLM().on("PlannerOutput", lambda m, s: PlannerOutput(
-        reply="planned", tasks=[TaskDraft(title="build svc", estimate="2d", linked_spec=["SPEC-1"])]))
+        reply="planned",
+        tasks=[TaskDraft(title="build svc", estimate="2d", linked_spec=["SPEC-1"])]))
     with session_scope() as s:
         p = create_project(s, "d")
         repo = GraphRepository(s, p.id)

@@ -9,7 +9,6 @@ from app.engines import ConsistencyChecker, Verdict
 from app.graph import GraphRepository, create_project
 from app.orchestrator import (
     Conductor,
-    GateNotPassed,
     PersonaViolation,
     ProposedPatch,
     advance,
@@ -21,7 +20,7 @@ from app.orchestrator import (
 )
 from app.orchestrator.blackboard import BlackboardViolation
 from app.orchestrator.types import AgentContext, AgentResult
-from app.schemas import DocumentType, GateStatus, PRDItem, Persona, Requirement
+from app.schemas import DocumentType, GateStatus, Persona, PRDItem, Requirement
 from tests.fake_llm import FakeLLM
 
 
@@ -91,6 +90,29 @@ def test_gate_blocks_then_advances():
         assert state.current_stage == 2
         assert state.persona == Persona.BUSINESS_USER
         assert state.gate_status[1] == GateStatus.PASSED
+
+
+def test_stale_node_re_locks_gate_until_reconciled():
+    """Design §13.5: an unreconciled stale node holds the gate shut even when the
+    rubric passes; clearing it reopens the gate."""
+    with session_scope() as s:
+        p = create_project(s, "demo")
+        repo = GraphRepository(s, p.id)
+        state = new_state(p.id)
+        req = repo.upsert(Requirement(statement="clear, testable, scoped requirement"))
+        cond = Conductor(repo, _green_checker(), {1: FakeReqAgent()})
+
+        repo.set_stale(req.id, True)
+        res = cond.confirm_stage(state)
+        assert res.scorecard.gate_passed is True  # rubric is satisfied
+        assert res.advanced is False  # but the stale node holds the gate
+        assert req.id in res.blocked_by_stale
+        assert state.current_stage == 1
+
+        repo.clear_stale(req.id)  # reconcile
+        res2 = cond.confirm_stage(state)
+        assert res2.advanced is True
+        assert state.current_stage == 2
 
 
 def test_reopen_sets_downstream_needs_review():

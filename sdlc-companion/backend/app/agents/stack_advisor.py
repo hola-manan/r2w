@@ -18,7 +18,8 @@ ROLE = (
     "(datastore, backend runtime, frontend, auth, hosting, messaging, realtime...). "
     "You may ONLY choose technologies on the company tech radar: prefer Adopt, "
     "allow Trial only with a caveat + named Adopt fallback + risk note, never Hold. "
-    "Each ADR must cite the PRD/COMP IDs it satisfies and the radar entries used. "
+    "Each ADR must state its `context` (the PRD/COMP IDs that drive the decision) and "
+    "cite the PRD/COMP IDs it satisfies and the radar entries used. "
     "If a need can only be met by a Hold/off-radar technology, DO NOT choose it — "
     "set `escalation` describing the conflict and the options."
 )
@@ -27,6 +28,7 @@ ROLE = (
 class StackAdvisor(BaseAgent):
     name = "stack_advisor"
     writes = DocumentType.ADR
+    stage = 3
 
     def _prompt(self, ctx: AgentContext, extra: str = "") -> str:
         prds = render_type(ctx.repo, DocumentType.PRD_ITEM)
@@ -82,7 +84,15 @@ class StackAdvisor(BaseAgent):
                         "options": ["relax requirement", "off-radar exception", "rescope"],
                     }
                     continue  # never silently write a violating ADR
-            adr = ctx.repo.upsert(self._to_adr(d), agent=self.name)
+            adr_model = self._to_adr(d)
+            if ctx.retriever is not None:
+                # Ground radar citations: drop hallucinated/miscased names, keep `chosen`.
+                refs = ctx.retriever.citation_refs(d.radar_refs)
+                chosen_entry = ctx.retriever.lookup(d.chosen)
+                if chosen_entry and chosen_entry.name not in refs:
+                    refs.insert(0, chosen_entry.name)
+                adr_model.radar_refs = refs
+            adr = ctx.repo.upsert(adr_model, agent=self.name)
             for sid in d.satisfies:
                 if ctx.repo.get_optional(sid):
                     ctx.repo.link(adr.id, sid, EdgeType.SATISFIES)
@@ -96,7 +106,8 @@ class StackAdvisor(BaseAgent):
             for o in d.options
         ]
         return ADR(
-            decision=d.decision, chosen=d.chosen, options=options, rationale=d.rationale,
+            decision=d.decision, chosen=d.chosen, context=d.context or list(d.satisfies),
+            options=options, rationale=d.rationale,
             satisfies=d.satisfies, radar_refs=d.radar_refs, risks=d.risks,
         )
 

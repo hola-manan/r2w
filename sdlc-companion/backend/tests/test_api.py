@@ -4,12 +4,12 @@ from __future__ import annotations
 import pytest
 from fastapi.testclient import TestClient
 
+from app.agents.drafts import PRDAuthorOutput, PRDDraft, ReqAnalystOutput, ReqDraft
 from app.api import deps
 from app.db.base import Base
 from app.db.session import get_engine, init_db
 from app.engines import Verdict
 from app.engines.consistency_checker import ConsistencyChecker  # noqa: F401
-from app.agents.drafts import PRDAuthorOutput, PRDDraft, ReqAnalystOutput, ReqDraft
 from tests.fake_llm import FakeLLM
 
 
@@ -90,6 +90,43 @@ def test_dismiss_requires_reason(client):
     pid = proj["id"]
     r = client.post(f"/projects/{pid}/impact/dismiss", json={"node_id": "REQ-1", "reason": ""})
     assert r.status_code == 400
+
+
+def test_accept_patch_triggers_followup_impact():
+    """Accepting a patch opens the next impact pass (design §13.4): the dependent
+    spec is re-checked and flagged, not silently left consistent."""
+    from app.db.session import session_scope
+    from app.graph import GraphRepository, create_project
+    from app.llm import get_llm
+    from app.schemas import ADR, EdgeType, SpecComponent
+
+    llm = FakeLLM()
+    llm.on("Verdict", lambda m, s: Verdict(
+        status="contradicted", justification="ADR changed",
+        suggested_patch={"responsibility": "update for new datastore"}))
+    deps.LLM_FACTORY = lambda: llm
+    try:
+        with session_scope() as s:
+            p = create_project(s, "d", profile_id="eu-fintech")
+            pid = p.id
+            repo = GraphRepository(s, p.id)
+            adr = repo.upsert(ADR(decision="datastore", chosen="PostgreSQL"))
+            spec = repo.upsert(SpecComponent(name="Svc", tech_refs=[adr.id]))
+            repo.link(spec.id, adr.id, EdgeType.DEPENDS_ON)
+            adr_id, spec_id = adr.id, spec.id
+
+        from app.main import create_app
+
+        with TestClient(create_app()) as c:
+            res = c.post(
+                f"/projects/{pid}/impact/accept",
+                json={"target_id": adr_id, "target_type": "adr",
+                      "change": {"chosen": "MySQL"}},
+            ).json()
+        assert res["node"]["id"] == adr_id and res["node"]["chosen"] == "MySQL"
+        assert any(it["node_id"] == spec_id for it in res["impact"]["items"])
+    finally:
+        deps.LLM_FACTORY = get_llm
 
 
 def test_websocket_streams_events(client):

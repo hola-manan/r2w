@@ -18,6 +18,7 @@ ROLE = (
 class PRDAuthor(BaseAgent):
     name = "prd_author"
     writes = DocumentType.PRD_ITEM
+    stage = 2
 
     def handle(self, ctx: AgentContext) -> AgentResult:
         reqs = render_type(ctx.repo, DocumentType.REQUIREMENT)

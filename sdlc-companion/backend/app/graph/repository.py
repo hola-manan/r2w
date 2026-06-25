@@ -96,6 +96,11 @@ class GraphRepository:
             row = self._row(node.id)
             if row is None:
                 raise KeyError(f"node {node.id} not found")
+            if node.doc_type.value != row.type:
+                raise ValueError(
+                    f"node {node.id} is a {row.type}; refusing to overwrite it with a "
+                    f"{node.doc_type.value}"
+                )
             node.version = row.version + 1
             node.last_changed = _now()
             row.version = node.version
@@ -154,6 +159,10 @@ class GraphRepository:
         payload["stale"] = value
         row.payload = payload
         self.s.flush()
+
+    def clear_stale(self, node_id: str) -> None:
+        """Convenience wrapper: mark a node fresh again (design §13.5 reconciliation)."""
+        self.set_stale(node_id, False)
 
     def versions(self, node_id: str) -> list[NodeVersionRow]:
         return list(

@@ -32,8 +32,8 @@ class ChallengeIn(BaseModel):
 def _persona(value: str) -> Persona:
     try:
         return Persona(value)
-    except ValueError:
-        raise HTTPException(status_code=400, detail=f"unknown persona '{value}'")
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=f"unknown persona '{value}'") from exc
 
 
 def _run_turn(session: Session, project_id: str, message: str, persona: Persona) -> dict:
@@ -41,7 +41,7 @@ def _run_turn(session: Session, project_id: str, message: str, persona: Persona)
     try:
         resp = a.conductor.handle_message(a.state, message, persona)
     except PersonaViolation as exc:
-        raise HTTPException(status_code=409, detail=str(exc))
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
 
     impact = None
     # Run impact after edits once there is downstream structure (stage >= 3).
@@ -68,7 +68,9 @@ def post_message(project_id: str, body: MessageIn, session: Session = Depends(ge
 
 
 @router.post("/projects/{project_id}/challenge")
-def post_challenge(project_id: str, body: ChallengeIn, session: Session = Depends(get_session)) -> dict:
+def post_challenge(
+    project_id: str, body: ChallengeIn, session: Session = Depends(get_session)
+) -> dict:
     a = build_conductor(session, project_id)
     agent = a.conductor.agents.get(3)
     from app.orchestrator.types import AgentContext

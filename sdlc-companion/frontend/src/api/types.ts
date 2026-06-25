@@ -84,6 +84,12 @@ export interface ConfirmResult {
   scorecard: Scorecard;
   advanced: boolean;
   new_stage: number;
+  blocked_by_stale: string[]; // node ids holding the gate shut despite a passing rubric
+}
+
+export interface AcceptResult {
+  node: Artifact;
+  impact: ImpactReport; // follow-up pass opened by accepting the patch
 }
 
 export interface GraphData {

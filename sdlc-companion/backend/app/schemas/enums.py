@@ -23,6 +23,8 @@ class EdgeType(str, Enum):
     CONSTRAINS = "constrains"
     # Task -> SpecComponent
     IMPLEMENTS = "implements"
+    # SpecComponent -> ADR (component depends on a stack decision)
+    DEPENDS_ON = "depends_on"
 
 
 class Ring(str, Enum):

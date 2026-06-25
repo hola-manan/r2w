@@ -26,15 +26,27 @@ def bfs(
     result = TraversalResult()
     visited: set[str] = set(start_ids)
     frontier: list[str] = list(start_ids)
+    seen_edges: set[tuple[str, str, EdgeType]] = set()
     depth = 0
 
     while frontier and depth < max_depth:
         next_frontier: list[str] = []
         for node_id in frontier:
-            for neighbor_id, edge in repo.adjacent(
-                node_id, direction=direction, edges=edge_filter
-            ):
-                result.path_edges.append((node_id, neighbor_id, edge))
+            # Each step carries the edge in its true (from, to) orientation plus the
+            # neighbor reached, regardless of which way we walked it.
+            steps: list[tuple[str, str, EdgeType, str]] = []
+            if direction in ("out", "both"):
+                for neighbor_id, edge in repo.adjacent(node_id, direction="out", edges=edge_filter):
+                    steps.append((node_id, neighbor_id, edge, neighbor_id))
+            if direction in ("in", "both"):
+                for neighbor_id, edge in repo.adjacent(node_id, direction="in", edges=edge_filter):
+                    steps.append((neighbor_id, node_id, edge, neighbor_id))
+
+            for from_id, to_id, edge, neighbor_id in steps:
+                key = (from_id, to_id, edge)
+                if key not in seen_edges:
+                    seen_edges.add(key)
+                    result.path_edges.append((from_id, to_id, edge))
                 if neighbor_id in visited:
                     continue
                 visited.add(neighbor_id)

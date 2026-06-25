@@ -28,7 +28,7 @@ from app.engines import Verdict
 from app.graph import GraphRepository, create_project
 from app.orchestrator.types import AgentContext
 from app.profile import ProfileRetriever, load_profile
-from app.schemas import PRDItem, Persona
+from app.schemas import Persona, PRDItem
 from tests.fake_llm import FakeLLM
 
 
@@ -80,7 +80,8 @@ def client():
 
 
 def test_full_walkthrough_reaches_task_plan_with_traceability(client):
-    pid = client.post("/projects", json={"name": "Feedback", "profile_id": "eu-fintech"}).json()["id"]
+    resp = client.post("/projects", json={"name": "Feedback", "profile_id": "eu-fintech"})
+    pid = resp.json()["id"]
     plan = [
         (1, "business_user", "customers send feedback, team triages it"),
         (2, "business_user", "draft the PRD"),
@@ -93,7 +94,9 @@ def test_full_walkthrough_reaches_task_plan_with_traceability(client):
                            json={"message": msg, "persona": persona}).json()
         assert "scorecard" in turn
         adv = client.post(f"/projects/{pid}/advance").json()
-        assert adv["advanced"] is True, f"stage {stage} gate did not pass: {turn['scorecard']['blockers']}"
+        assert adv["advanced"] is True, (
+            f"stage {stage} gate did not pass: {turn['scorecard']['blockers']}"
+        )
 
     proj = client.get(f"/projects/{pid}").json()
     assert proj["gate_status"]["5"] == "passed"
@@ -143,3 +146,51 @@ def test_profile_swap_same_request_diverges():
     # startup-web: Firebase is Adopt -> ADR written, no escalation
     assert startup.written_ids != []
     assert startup.escalation is None
+
+
+def test_gate_relock_blocks_advance_until_reconciled():
+    """§13.5 acceptance (end-to-end through the API): a stale node holds a stage's
+    gate shut even when the rubric passes, and reconciling it reopens the gate. This
+    exercises the reconciliation cascade built across P05/P07/P09."""
+    from app.db.session import session_scope
+    from app.graph import GraphRepository, create_project
+    from app.llm import get_llm
+    from app.main import create_app
+    from app.orchestrator import new_state, save_state
+    from app.schemas import ADR, EdgeType, GateStatus, SpecComponent
+
+    llm = FakeLLM()
+    llm.on("Verdict", lambda m, s: Verdict(level=3, status="valid", justification="ok"))
+    deps.LLM_FACTORY = lambda: llm
+    try:
+        with session_scope() as s:
+            p = create_project(s, "acc", profile_id="eu-fintech")
+            pid = p.id
+            repo = GraphRepository(s, p.id)
+            prd = repo.upsert(PRDItem(title="store data"))
+            adr = repo.upsert(ADR(decision="datastore", chosen="PostgreSQL", satisfies=[prd.id]))
+            spec = repo.upsert(
+                SpecComponent(name="DataSvc", linked_prd=[prd.id], tech_refs=[adr.id]))
+            repo.link(spec.id, prd.id, EdgeType.REALIZES)
+            repo.link(spec.id, adr.id, EdgeType.DEPENDS_ON)
+            repo.set_stale(spec.id, True)  # an unreconciled impact flag in stage 4
+            state = new_state(pid)
+            state.current_stage = 4
+            for stg in (1, 2, 3):
+                state.gate_status[stg] = GateStatus.PASSED
+            save_state(s, state)
+            spec_id = spec.id
+
+        with TestClient(create_app()) as c:
+            blocked = c.post(f"/projects/{pid}/advance").json()
+            assert blocked["scorecard"]["gate_passed"] is True  # rubric is satisfied
+            assert blocked["advanced"] is False  # but the stale node holds the gate
+            assert spec_id in blocked["blocked_by_stale"]
+
+            # reconcile (dismiss with a reason) and the gate reopens
+            c.post(f"/projects/{pid}/impact/dismiss",
+                   json={"node_id": spec_id, "reason": "accepted risk"})
+            advanced = c.post(f"/projects/{pid}/advance").json()
+            assert advanced["advanced"] is True and advanced["new_stage"] == 5
+    finally:
+        deps.LLM_FACTORY = get_llm

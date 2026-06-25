@@ -26,4 +26,10 @@ def load_profile(profile_id: str) -> CompanyProfile:
     if not path.exists():
         raise FileNotFoundError(f"profile '{profile_id}' not found at {path}")
     data = json.loads(path.read_text(encoding="utf-8"))
-    return CompanyProfile.model_validate(data)
+    profile = CompanyProfile.model_validate(data)
+    if profile.id != profile_id:
+        raise ValueError(
+            f"profile id '{profile.id}' does not match its filename '{profile_id}' "
+            f"(ids are cited in ADRs and must be stable)"
+        )
+    return profile
