@@ -25,6 +25,7 @@ ROLE = (
 class Architect(BaseAgent):
     name = "architect"
     writes = DocumentType.SPEC_COMPONENT
+    stage = 4
 
     def handle(self, ctx: AgentContext) -> AgentResult:
         prds = render_type(ctx.repo, DocumentType.PRD_ITEM)

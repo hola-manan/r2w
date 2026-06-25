@@ -18,6 +18,7 @@ ROLE = (
 class Planner(BaseAgent):
     name = "planner"
     writes = DocumentType.TASK
+    stage = 5
 
     def handle(self, ctx: AgentContext) -> AgentResult:
         specs = render_type(ctx.repo, DocumentType.SPEC_COMPONENT)

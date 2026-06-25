@@ -235,3 +235,22 @@ STAGES: dict[int, Rubric] = {
         threshold=0.6,
     ),
 }
+
+
+def describe_rubric(stage: int) -> str:
+    """Render a stage's rubric as prompt text so the agent optimizes exactly what the
+    P04 gate measures, from this single source (no divergent rubric prose in prompts)."""
+    rubric = STAGES[stage]
+
+    def _line(dim: Dimension, kind: str) -> str:
+        anchors = " | ".join(f"L{lvl}={txt}" for lvl, txt in sorted(dim.anchors.items()))
+        return f"- [{kind}] {dim.name}: {dim.question} ({anchors})"
+
+    lines = ["Readiness rubric for this stage (the gate you are working toward):"]
+    lines += [_line(d, "hard") for d in rubric.hard]
+    lines += [_line(d, "soft") for d, _w in rubric.soft]
+    lines.append(
+        f"Gate: every hard dimension must reach L3 (green) and the weighted soft score "
+        f"must be >= {rubric.threshold}."
+    )
+    return "\n".join(lines)

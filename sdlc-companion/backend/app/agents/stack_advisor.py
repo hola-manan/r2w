@@ -28,6 +28,7 @@ ROLE = (
 class StackAdvisor(BaseAgent):
     name = "stack_advisor"
     writes = DocumentType.ADR
+    stage = 3
 
     def _prompt(self, ctx: AgentContext, extra: str = "") -> str:
         prds = render_type(ctx.repo, DocumentType.PRD_ITEM)
@@ -83,7 +84,15 @@ class StackAdvisor(BaseAgent):
                         "options": ["relax requirement", "off-radar exception", "rescope"],
                     }
                     continue  # never silently write a violating ADR
-            adr = ctx.repo.upsert(self._to_adr(d), agent=self.name)
+            adr_model = self._to_adr(d)
+            if ctx.retriever is not None:
+                # Ground radar citations: drop hallucinated/miscased names, keep `chosen`.
+                refs = ctx.retriever.citation_refs(d.radar_refs)
+                chosen_entry = ctx.retriever.lookup(d.chosen)
+                if chosen_entry and chosen_entry.name not in refs:
+                    refs.insert(0, chosen_entry.name)
+                adr_model.radar_refs = refs
+            adr = ctx.repo.upsert(adr_model, agent=self.name)
             for sid in d.satisfies:
                 if ctx.repo.get_optional(sid):
                     ctx.repo.link(adr.id, sid, EdgeType.SATISFIES)

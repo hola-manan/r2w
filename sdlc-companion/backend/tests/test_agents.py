@@ -37,6 +37,51 @@ def _ctx(repo, message, retriever=None):
                         retriever=retriever)
 
 
+def test_agents_inject_their_stage_rubric():
+    """The single rubrics.py source feeds the agent prompt (no divergent rubric prose)."""
+    from app.engines.rubrics import describe_rubric
+
+    system = RequirementsAnalyst(FakeLLM())._system("role", brief="")
+    assert "Clarity" in system and "Testability" in system
+    assert describe_rubric(1) in system
+    # The Planner (stage 5) gets the task-plan rubric instead.
+    assert "Dependency acyclicity" in Planner(FakeLLM())._system("role")
+
+
+def test_requirements_analyst_sets_source_turn():
+    from app.orchestrator.state import Message
+
+    llm = FakeLLM().on("ReqAnalystOutput", lambda m, s: ReqAnalystOutput(
+        reply="ok", requirements=[ReqDraft(statement="Users export CSV")]))
+    with session_scope() as s:
+        p = create_project(s, "d")
+        repo = GraphRepository(s, p.id)
+        ctx = AgentContext(
+            repo=repo, message="export", persona=Persona.BUSINESS_USER,
+            history=[Message(role="user", content="hi"), Message(role="agent", content="?"),
+                     Message(role="user", content="export")],
+        )
+        res = RequirementsAnalyst(llm).handle(ctx)
+        assert repo.get(res.written_ids[0]).source_turn == 2  # two user turns
+
+
+def test_stack_advisor_grounds_radar_refs():
+    retr = ProfileRetriever(load_profile("eu-fintech"))
+    llm = FakeLLM().on("StackAdvisorOutput", lambda m, s: StackAdvisorOutput(
+        reply="ok", adrs=[ADRDraft(decision="datastore", chosen="PostgreSQL",
+                                   satisfies=["PRD-1"],
+                                   radar_refs=["Postgres", "MadeUpDB"])]))
+    with session_scope() as s:
+        p = create_project(s, "d", profile_id="eu-fintech")
+        repo = GraphRepository(s, p.id)
+        repo.upsert(PRDItem(title="store data"))
+        res = StackAdvisor(llm).handle(_ctx(repo, "pick a db", retr))
+        adr = repo.get(res.written_ids[0])
+        # bogus "MadeUpDB" dropped; canonical "PostgreSQL" present (chosen always cited).
+        assert "MadeUpDB" not in adr.radar_refs
+        assert "PostgreSQL" in adr.radar_refs
+
+
 def test_requirements_analyst_writes_requirement():
     llm = FakeLLM().on("ReqAnalystOutput", lambda m, s: ReqAnalystOutput(
         reply="got it", requirements=[ReqDraft(statement="Users can export data as CSV")]))
