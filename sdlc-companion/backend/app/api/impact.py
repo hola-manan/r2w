@@ -6,6 +6,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.api.deps import build_conductor
+from app.api.dto import node_to_dto
 from app.db.session import get_session
 from app.orchestrator import ProposedPatch, save_state
 from app.schemas import DocumentType
@@ -48,8 +49,12 @@ def accept_patch(
         origin_agent="impact_analyzer",
     )
     updated = a.conductor.apply_impact_patch(patch)
+    # Accepting a patch changes the node's content, which opens the next impact pass on
+    # it (the human-ack-between-passes cascade, design §13.4): re-analyze from the patched
+    # node so any newly-affected neighbors are flagged rather than silently left stale.
+    report = a.conductor.run_impact(a.state, [updated.id])
     save_state(session, a.state)
-    return updated.model_dump(mode="json")
+    return {"node": node_to_dto(a.repo, updated), "impact": report.model_dump()}
 
 
 @router.post("/projects/{project_id}/impact/dismiss")

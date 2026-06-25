@@ -7,13 +7,12 @@ from sqlalchemy.orm import Session
 from app.api.dto import graph_dto, node_to_dto
 from app.db.session import get_session
 from app.graph import GraphRepository, get_project
-from app.orchestrator.state import STAGE_OF_TYPE
+from app.orchestrator.state import TYPE_OF_STAGE
 from app.schemas import DocumentType
 
 router = APIRouter(tags=["artifacts"])
 
 _TYPE_BY_NAME = {t.value: t for t in DocumentType}
-_TYPES_BY_STAGE = {stage: dt for dt, stage in STAGE_OF_TYPE.items()}
 
 
 @router.get("/projects/{project_id}/artifacts")
@@ -32,7 +31,7 @@ def list_artifacts(
             raise HTTPException(status_code=400, detail=f"unknown type '{type}'")
         nodes = repo.list_by_type(doc_type)
     elif stage:
-        doc_type = _TYPES_BY_STAGE.get(stage)
+        doc_type = TYPE_OF_STAGE.get(stage)
         nodes = repo.list_by_type(doc_type) if doc_type else []
     else:
         nodes = repo.list_all()
