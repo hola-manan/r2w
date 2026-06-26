@@ -1,6 +1,6 @@
 """Run the scripted walkthrough against a LIVE backend (requires a real API key).
 
-Usage (with the server running on :8000 and ANTHROPIC_API_KEY set):
+Usage (with the server running on :8000 and GOOGLE_API_KEY set):
     python -m scripts.run_demo --profile eu-fintech
 """
 from __future__ import annotations

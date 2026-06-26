@@ -1,4 +1,4 @@
-"""Agent base (P06). Claude + role prompt (incl. rubric awareness) + cite discipline."""
+"""Agent base (P06). Gemini + role prompt (incl. rubric awareness) + cite discipline."""
 from __future__ import annotations
 
 from typing import Optional, TypeVar

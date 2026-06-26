@@ -6,7 +6,7 @@ import os
 import pytest
 
 os.environ.setdefault("DB_PATH", ":memory:")
-os.environ.setdefault("ANTHROPIC_API_KEY", "test-key")
+os.environ.setdefault("GOOGLE_API_KEY", "test-key")
 
 
 @pytest.fixture(autouse=True)
