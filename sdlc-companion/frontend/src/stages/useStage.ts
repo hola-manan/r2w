@@ -7,6 +7,7 @@ import type {
   ImpactItem,
   ImpactReport,
   Scorecard,
+  TurnResponse,
 } from "../api/types";
 import type { ChatMessage } from "../components/Chat";
 import type { OpenQuestion } from "../components/QuestionBoxes";
@@ -35,6 +36,8 @@ export function useStage(projectId: string, stage: number) {
   const [impact, setImpact] = useState<ImpactReport | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  // Review comments queued on artifacts (node id -> comment), submitted as a batch.
+  const [pendingComments, setPendingComments] = useState<Record<string, string>>({});
 
   const refresh = useCallback(async () => {
     const [arts, card] = await Promise.all([
@@ -49,43 +52,76 @@ export function useStage(projectId: string, stage: number) {
     setMessages([]);
     setEscalation(null);
     setImpact(null);
+    setPendingComments({});
     refresh();
   }, [refresh]);
 
-  const send = useCallback(
-    async (text: string, attachments: Attachment[] = []) => {
+  // Push a user-log entry, run a turn-producing call, and fold the response back
+  // into stage state. Shared by both free-text sends and batch comment submits.
+  const runTurn = useCallback(
+    async (userEntry: ChatMessage, call: () => Promise<TurnResponse>): Promise<boolean> => {
       setBusy(true);
       setError("");
-      // Show only the typed text + attachment chips in the log, but fold the
-      // extracted document text into the message the agent actually receives.
-      setMessages((m) => [
-        ...m,
-        {
-          role: "user",
-          content: text,
-          attachments: attachments.map((a) => a.filename),
-        },
-      ]);
-      const outgoing = [
-        text,
-        ...attachments.map((a) => `\n\n[Attached document: ${a.filename}]\n${a.text}`),
-      ].join("");
+      setMessages((m) => [...m, userEntry]);
       try {
-        const turn = await api.message(projectId, outgoing, PERSONA_BY_STAGE[stage]);
+        const turn = await call();
         if (turn.reply) setMessages((m) => [...m, { role: "agent", content: turn.reply }]);
         setScorecard(turn.scorecard);
         setEscalation(turn.escalation);
         setImpact(turn.impact);
         await refresh();
+        return true;
       } catch (e) {
         setError(String(e));
         setMessages((m) => [...m, { role: "agent", content: `⚠ ${e}` }]);
+        return false;
       } finally {
         setBusy(false);
       }
     },
-    [projectId, stage, refresh],
+    [refresh],
   );
+
+  const send = useCallback(
+    async (text: string, attachments: Attachment[] = []) => {
+      // Show only the typed text + attachment chips in the log, but fold the
+      // extracted document text into the message the agent actually receives.
+      const outgoing = [
+        text,
+        ...attachments.map((a) => `\n\n[Attached document: ${a.filename}]\n${a.text}`),
+      ].join("");
+      await runTurn(
+        { role: "user", content: text, attachments: attachments.map((a) => a.filename) },
+        () => api.message(projectId, outgoing, PERSONA_BY_STAGE[stage]),
+      );
+    },
+    [projectId, stage, runTurn],
+  );
+
+  const setComment = useCallback((nodeId: string, text: string) => {
+    setPendingComments((c) => {
+      const next = { ...c };
+      if (text.trim() === "") delete next[nodeId];
+      else next[nodeId] = text;
+      return next;
+    });
+  }, []);
+
+  const clearComments = useCallback(() => setPendingComments({}), []);
+
+  const submitComments = useCallback(async () => {
+    const items = Object.entries(pendingComments)
+      .map(([node_id, comment]) => ({ node_id, comment: comment.trim() }))
+      .filter((c) => c.comment);
+    if (items.length === 0) return;
+    const summary =
+      "Comments submitted:\n" + items.map((c) => `• ${c.node_id}: ${c.comment}`).join("\n");
+    const ok = await runTurn(
+      { role: "user", content: summary },
+      () => api.comments(projectId, items, PERSONA_BY_STAGE[stage]),
+    );
+    if (ok) setPendingComments({});
+  }, [projectId, stage, runTurn, pendingComments]);
 
   // Reconcile one impact item: drop it from the panel and fold in any follow-up
   // pass returned by accepting a patch (deduped by node id; the follow-up wins).
@@ -112,6 +148,8 @@ export function useStage(projectId: string, stage: number) {
 
   return {
     artifacts, scorecard, messages, escalation, impact, busy, error, openQuestions,
+    pendingComments, commentCount: Object.keys(pendingComments).length,
+    setComment, clearComments, submitComments,
     setImpact, resolveImpact, refresh, send,
   };
 }

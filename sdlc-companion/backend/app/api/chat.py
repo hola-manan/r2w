@@ -39,6 +39,16 @@ class ChallengeIn(BaseModel):
     objection: str
 
 
+class CommentItem(BaseModel):
+    node_id: str
+    comment: str
+
+
+class CommentsIn(BaseModel):
+    comments: list[CommentItem]
+    persona: str
+
+
 def _persona(value: str) -> Persona:
     try:
         return Persona(value)
@@ -75,6 +85,24 @@ def _run_turn(session: Session, project_id: str, message: str, persona: Persona)
 @router.post("/projects/{project_id}/message")
 def post_message(project_id: str, body: MessageIn, session: Session = Depends(get_session)) -> dict:
     return _run_turn(session, project_id, body.message, _persona(body.persona))
+
+
+@router.post("/projects/{project_id}/comments")
+def post_comments(
+    project_id: str, body: CommentsIn, session: Session = Depends(get_session)
+) -> dict:
+    """Batch artifact review comments. Each comment names an artifact the current
+    stage owns; the owning agent revises those artifacts in place (refine-by-id)
+    and replies summarizing the changes. Reuses the standard turn pipeline."""
+    if not body.comments:
+        raise HTTPException(status_code=400, detail="no comments submitted")
+    lines = "\n".join(f'- {c.node_id}: "{c.comment}"' for c in body.comments)
+    message = (
+        "The user left review comments on specific artifacts. Revise each named "
+        "artifact (set its `id` to update it) to address its comment, then reply "
+        "summarizing what you changed.\n\nComments:\n" + lines
+    )
+    return _run_turn(session, project_id, message, _persona(body.persona))
 
 
 @router.post("/projects/{project_id}/extract")

@@ -4,6 +4,7 @@ import type { Artifact, ProjectSummary } from "../api/types";
 import { ArtifactCard } from "../components/ArtifactCard";
 import { RingBadge } from "../components/Badges";
 import { Chat } from "../components/Chat";
+import { CommentBar } from "../components/CommentBar";
 import { Scorecard } from "../components/Scorecard";
 import { SplitView } from "../components/SplitView";
 import { AdvanceBar } from "../components/AdvanceBar";
@@ -13,10 +14,14 @@ function AdrCard({
   adr,
   projectId,
   onChanged,
+  commentValue,
+  onCommentChange,
 }: {
   adr: Artifact;
   projectId: string;
   onChanged: () => void;
+  commentValue?: string;
+  onCommentChange?: (text: string) => void;
 }) {
   const [busy, setBusy] = useState(false);
   const options = (adr.options as { name: string; ring?: string }[]) || [];
@@ -35,7 +40,7 @@ function AdrCard({
   };
 
   return (
-    <ArtifactCard artifact={adr}>
+    <ArtifactCard artifact={adr} commentValue={commentValue} onCommentChange={onCommentChange}>
       <div className="flex flex-wrap gap-1.5 mt-2">
         {options.map((o, i) => (
           <span key={i} className="inline-flex items-center gap-1">
@@ -128,12 +133,20 @@ export default function Stack({
               onChanged();
             }}
           />
+          <CommentBar
+            count={s.commentCount}
+            busy={s.busy}
+            onSubmit={s.submitComments}
+            onClear={s.clearComments}
+          />
           <div className="space-y-2">
             {s.artifacts.map((a) => (
               <AdrCard
                 key={a.id}
                 adr={a}
                 projectId={project.id}
+                commentValue={s.pendingComments[a.id] ?? ""}
+                onCommentChange={(t) => s.setComment(a.id, t)}
                 onChanged={() => {
                   s.refresh();
                   onChanged();

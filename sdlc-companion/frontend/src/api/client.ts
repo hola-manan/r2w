@@ -2,6 +2,7 @@
 import type {
   AcceptResult,
   Artifact,
+  CommentItem,
   ConfirmResult,
   ExtractResult,
   GraphData,
@@ -72,6 +73,11 @@ export const api = {
     req<TurnResponse>(`/projects/${id}/message`, {
       method: "POST",
       body: JSON.stringify({ message, persona }),
+    }),
+  comments: (id: string, comments: CommentItem[], persona: string) =>
+    req<TurnResponse>(`/projects/${id}/comments`, {
+      method: "POST",
+      body: JSON.stringify({ comments, persona }),
     }),
   challenge: (id: string, adr_id: string, objection: string) =>
     req<TurnResponse>(`/projects/${id}/challenge`, {

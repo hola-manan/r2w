@@ -4,6 +4,7 @@ import { Chat } from "../components/Chat";
 import { Scorecard } from "../components/Scorecard";
 import { SplitView } from "../components/SplitView";
 import { AdvanceBar } from "../components/AdvanceBar";
+import { CommentBar } from "../components/CommentBar";
 import { useStage } from "./useStage";
 
 export default function Prd({
@@ -38,9 +39,20 @@ export default function Prd({
               onChanged();
             }}
           />
+          <CommentBar
+            count={s.commentCount}
+            busy={s.busy}
+            onSubmit={s.submitComments}
+            onClear={s.clearComments}
+          />
           <div className="space-y-2">
             {s.artifacts.map((a) => (
-              <ArtifactCard key={a.id} artifact={a} />
+              <ArtifactCard
+                key={a.id}
+                artifact={a}
+                commentValue={s.pendingComments[a.id] ?? ""}
+                onCommentChange={(t) => s.setComment(a.id, t)}
+              />
             ))}
           </div>
         </div>

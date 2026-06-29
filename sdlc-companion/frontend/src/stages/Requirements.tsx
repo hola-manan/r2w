@@ -4,6 +4,7 @@ import { Scorecard } from "../components/Scorecard";
 import { SplitView } from "../components/SplitView";
 import { AdvanceBar } from "../components/AdvanceBar";
 import { ArtifactCard } from "../components/ArtifactCard";
+import { CommentBar } from "../components/CommentBar";
 import { useStage } from "./useStage";
 
 export default function Requirements({
@@ -38,9 +39,20 @@ export default function Requirements({
               onChanged();
             }}
           />
+          <CommentBar
+            count={s.commentCount}
+            busy={s.busy}
+            onSubmit={s.submitComments}
+            onClear={s.clearComments}
+          />
           <div className="space-y-2">
             {s.artifacts.map((a) => (
-              <ArtifactCard key={a.id} artifact={a} />
+              <ArtifactCard
+                key={a.id}
+                artifact={a}
+                commentValue={s.pendingComments[a.id] ?? ""}
+                onCommentChange={(t) => s.setComment(a.id, t)}
+              />
             ))}
           </div>
         </div>

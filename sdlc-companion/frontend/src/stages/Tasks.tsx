@@ -4,6 +4,8 @@ import { Scorecard } from "../components/Scorecard";
 import { SplitView } from "../components/SplitView";
 import { AdvanceBar } from "../components/AdvanceBar";
 import { LinkChips } from "../components/LinkChips";
+import { CommentBar } from "../components/CommentBar";
+import { CommentBox } from "../components/CommentBox";
 import { useStage } from "./useStage";
 
 function groupByEpic(tasks: Artifact[]): Record<string, Artifact[]> {
@@ -48,6 +50,12 @@ export default function Tasks({
               onChanged();
             }}
           />
+          <CommentBar
+            count={s.commentCount}
+            busy={s.busy}
+            onSubmit={s.submitComments}
+            onClear={s.clearComments}
+          />
           <div className="space-y-4">
             {Object.entries(groups).map(([epic, tasks]) => (
               <div key={epic}>
@@ -70,6 +78,10 @@ export default function Tasks({
                         </p>
                       )}
                       <LinkChips out={t.links_out} />
+                      <CommentBox
+                        value={s.pendingComments[t.id] ?? ""}
+                        onChange={(text) => s.setComment(t.id, text)}
+                      />
                     </div>
                   ))}
                 </div>

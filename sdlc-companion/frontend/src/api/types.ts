@@ -99,6 +99,12 @@ export interface Attachment {
   text: string;
 }
 
+// A review comment targeting one artifact, submitted in a batch.
+export interface CommentItem {
+  node_id: string;
+  comment: string;
+}
+
 export type ExtractResult = Attachment;
 
 export interface GraphData {
