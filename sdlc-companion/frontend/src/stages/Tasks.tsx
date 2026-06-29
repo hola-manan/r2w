@@ -28,6 +28,8 @@ export default function Tasks({
     <SplitView
       left={
         <Chat
+          projectId={project.id}
+          questions={s.openQuestions}
           messages={s.messages}
           onSend={s.send}
           busy={s.busy}

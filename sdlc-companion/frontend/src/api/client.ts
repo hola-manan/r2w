@@ -3,6 +3,7 @@ import type {
   AcceptResult,
   Artifact,
   ConfirmResult,
+  ExtractResult,
   GraphData,
   Profile,
   ProjectSummary,
@@ -50,6 +51,22 @@ export const api = {
     req<ConfirmResult>(`/projects/${id}/advance`, { method: "POST" }),
   reopen: (id: string, stage: number) =>
     req<ProjectSummary>(`/projects/${id}/reopen/${stage}`, { method: "POST" }),
+
+  // Multipart upload: the browser must set the multipart boundary itself, so we
+  // bypass the JSON `req()` helper and don't set Content-Type.
+  extract: async (id: string, file: File): Promise<ExtractResult> => {
+    const form = new FormData();
+    form.append("file", file);
+    const res = await fetch(`${API_BASE}/projects/${id}/extract`, {
+      method: "POST",
+      body: form,
+    });
+    if (!res.ok) {
+      const detail = await res.json().catch(() => ({}));
+      throw new Error((detail as any).detail || `${res.status} ${res.statusText}`);
+    }
+    return res.json() as Promise<ExtractResult>;
+  },
 
   message: (id: string, message: string, persona: string) =>
     req<TurnResponse>(`/projects/${id}/message`, {
