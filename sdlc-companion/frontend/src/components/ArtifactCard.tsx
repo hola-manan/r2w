@@ -1,6 +1,7 @@
 import type { Artifact } from "../api/types";
 import { LinkChips } from "./LinkChips";
 import { StaleBadge } from "./Badges";
+import { CommentBox } from "./CommentBox";
 
 function titleOf(a: Artifact): string {
   return (
@@ -21,9 +22,13 @@ const HIDE = new Set([
 export function ArtifactCard({
   artifact,
   children,
+  commentValue,
+  onCommentChange,
 }: {
   artifact: Artifact;
   children?: React.ReactNode;
+  commentValue?: string;
+  onCommentChange?: (text: string) => void;
 }) {
   const fields = Object.entries(artifact).filter(
     ([k, v]) =>
@@ -52,6 +57,9 @@ export function ArtifactCard({
       </dl>
       <LinkChips out={artifact.links_out} inc={artifact.links_in} />
       {children}
+      {onCommentChange && (
+        <CommentBox value={commentValue ?? ""} onChange={onCommentChange} />
+      )}
     </div>
   );
 }
