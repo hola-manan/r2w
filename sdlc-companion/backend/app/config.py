@@ -24,6 +24,9 @@ class Settings(BaseSettings):
     request_timeout: float = 60.0
     # Comma-separated list of allowed CORS origins for the Vite dev server.
     cors_origins: str = "http://localhost:5173"
+    # Max accepted size (bytes) for an uploaded attachment (docx/xlsx). Guards
+    # the single-threaded PoC against pulling a huge file fully into memory.
+    max_upload_bytes: int = 10 * 1024 * 1024
 
     @property
     def cors_origin_list(self) -> list[str]:

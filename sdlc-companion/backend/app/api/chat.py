@@ -5,13 +5,23 @@ The WS emits the typed event union the frontend codes against:
 """
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi import (
+    APIRouter,
+    Depends,
+    File,
+    HTTPException,
+    UploadFile,
+    WebSocket,
+    WebSocketDisconnect,
+)
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.api.deps import build_conductor
 from app.api.dto import node_to_dto
+from app.config import get_settings
 from app.db.session import get_session, session_scope
+from app.llm.extract import SUPPORTED_EXTENSIONS, extract
 from app.orchestrator import save_state
 from app.orchestrator.state_machine import PersonaViolation
 from app.schemas import GateStatus, Persona
@@ -65,6 +75,32 @@ def _run_turn(session: Session, project_id: str, message: str, persona: Persona)
 @router.post("/projects/{project_id}/message")
 def post_message(project_id: str, body: MessageIn, session: Session = Depends(get_session)) -> dict:
     return _run_turn(session, project_id, body.message, _persona(body.persona))
+
+
+@router.post("/projects/{project_id}/extract")
+async def post_extract(project_id: str, file: UploadFile = File(...)) -> dict:
+    """Extract plain text from an uploaded docx/xlsx so the client can fold it
+    into a message as intent. The chat contract itself stays JSON-only."""
+    filename = file.filename or ""
+    if not filename.lower().endswith(SUPPORTED_EXTENSIONS):
+        raise HTTPException(
+            status_code=400,
+            detail=f"unsupported file type; only {', '.join(SUPPORTED_EXTENSIONS)} are accepted",
+        )
+    data = await file.read()
+    max_bytes = get_settings().max_upload_bytes
+    if len(data) > max_bytes:
+        raise HTTPException(
+            status_code=413,
+            detail=f"file too large ({len(data)} bytes); max is {max_bytes} bytes",
+        )
+    try:
+        text = extract(filename, data)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception as exc:  # noqa: BLE001 - surface parse failures to the client
+        raise HTTPException(status_code=400, detail=f"could not parse '{filename}': {exc}") from exc
+    return {"filename": filename, "text": text}
 
 
 @router.post("/projects/{project_id}/challenge")

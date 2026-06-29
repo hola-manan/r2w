@@ -3,11 +3,13 @@ import { useCallback, useEffect, useState } from "react";
 import { api } from "../api/client";
 import type {
   Artifact,
+  Attachment,
   ImpactItem,
   ImpactReport,
   Scorecard,
 } from "../api/types";
 import type { ChatMessage } from "../components/Chat";
+import type { OpenQuestion } from "../components/QuestionBoxes";
 
 export const TYPE_BY_STAGE: Record<number, string> = {
   1: "requirement",
@@ -51,12 +53,25 @@ export function useStage(projectId: string, stage: number) {
   }, [refresh]);
 
   const send = useCallback(
-    async (text: string) => {
+    async (text: string, attachments: Attachment[] = []) => {
       setBusy(true);
       setError("");
-      setMessages((m) => [...m, { role: "user", content: text }]);
+      // Show only the typed text + attachment chips in the log, but fold the
+      // extracted document text into the message the agent actually receives.
+      setMessages((m) => [
+        ...m,
+        {
+          role: "user",
+          content: text,
+          attachments: attachments.map((a) => a.filename),
+        },
+      ]);
+      const outgoing = [
+        text,
+        ...attachments.map((a) => `\n\n[Attached document: ${a.filename}]\n${a.text}`),
+      ].join("");
       try {
-        const turn = await api.message(projectId, text, PERSONA_BY_STAGE[stage]);
+        const turn = await api.message(projectId, outgoing, PERSONA_BY_STAGE[stage]);
         if (turn.reply) setMessages((m) => [...m, { role: "agent", content: turn.reply }]);
         setScorecard(turn.scorecard);
         setEscalation(turn.escalation);
@@ -90,8 +105,13 @@ export function useStage(projectId: string, stage: number) {
     [],
   );
 
+  // Open follow-up questions surfaced by the readiness scorecard, one box each.
+  const openQuestions: OpenQuestion[] = (scorecard?.dimensions ?? [])
+    .filter((d) => d.followup_question)
+    .map((d) => ({ key: d.key, name: d.name, question: d.followup_question as string }));
+
   return {
-    artifacts, scorecard, messages, escalation, impact, busy, error,
+    artifacts, scorecard, messages, escalation, impact, busy, error, openQuestions,
     setImpact, resolveImpact, refresh, send,
   };
 }

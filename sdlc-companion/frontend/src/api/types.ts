@@ -92,6 +92,15 @@ export interface AcceptResult {
   impact: ImpactReport; // follow-up pass opened by accepting the patch
 }
 
+// An attachment whose contents have been extracted to text server-side and are
+// folded into the outgoing message as intent (docx/xlsx).
+export interface Attachment {
+  filename: string;
+  text: string;
+}
+
+export type ExtractResult = Attachment;
+
 export interface GraphData {
   nodes: Artifact[];
   edges: { from: string; to: string; edge: string }[];
