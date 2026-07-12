@@ -21,7 +21,11 @@ ROLE = (
     "Each ADR must state its `context` (the PRD/COMP IDs that drive the decision) and "
     "cite the PRD/COMP IDs it satisfies and the radar entries used. "
     "If a need can only be met by a Hold/off-radar technology, DO NOT choose it — "
-    "set `escalation` describing the conflict and the options."
+    "set `escalation` describing the conflict and the options. "
+    "In addition to the radar, the team maintains automation / low-code tools in a capability "
+    "catalog; these count as available Adopt choices. When a per-task fit ranking of those "
+    "tools is provided, prefer the top-ranked team tool for any decision that needs its "
+    "data-prep / RPA / low-code-app capability, and cite it as `chosen`."
 )
 
 
@@ -41,10 +45,21 @@ class StackAdvisor(BaseAgent):
         )
 
     def handle(self, ctx: AgentContext) -> AgentResult:
+        # [integration Seam 2] Explicit task->tool matching over the team capability catalog.
+        # rank_tools is best-effort: an empty Ranking (no catalog / any LLM error) makes this
+        # method behave exactly as it did before the feature existed.
+        from app import tech
+
+        task = f"{render_type(ctx.repo, DocumentType.PRD_ITEM)}\nUser: {ctx.message}"
+        ranking = tech.rank_tools(self.llm, task)
         out = self._generate(
-            StackAdvisorOutput, self._prompt(ctx), self._system(ROLE, ctx.project_brief)
+            StackAdvisorOutput,
+            self._prompt(ctx, extra=ranking.prompt_block),
+            self._system(ROLE, ctx.project_brief),
         )
-        return self._apply(ctx, out)
+        result = self._apply(ctx, out)
+        result.reply = ranking.reply_block + result.reply
+        return result
 
     def challenge(self, ctx: AgentContext, adr_id: str, objection: str) -> AgentResult:
         """Architect challenge: reopen ONLY this decision, emit a superseding ADR."""
