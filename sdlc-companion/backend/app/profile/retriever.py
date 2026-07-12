@@ -31,7 +31,11 @@ class ProfileRetriever:
         for e in self.profile.radar:
             if e.name.lower() == name.lower():
                 return e
-        return None
+        # --- app.tech catalog fallback (team capability tools) [integration Seam 1] ---
+        # A catalog tool resolves to an Adopt RadarEntry, so validate_choice, radar_refs
+        # grounding, and the radar_compliance gate all accept it via this one chokepoint.
+        from app.tech import catalog_entry
+        return catalog_entry(name)  # None if not a catalog tool either
 
     # ----- compliance -----------------------------------------------------
     def hard_constraints(self) -> list[ComplianceRule]:
