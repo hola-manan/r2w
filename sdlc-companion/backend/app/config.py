@@ -19,6 +19,10 @@ class Settings(BaseSettings):
     google_api_key: str = ""
     google_model: str = "gemini-2.5-flash"
     db_path: str = "./data/project.db"
+    # Team Tech Capability Catalog (Alteryx/UiPath/Power Apps) + task->tool matching.
+    # On by default; set TECH_CATALOG_ENABLED=false to disable it (e.g. for a demo that
+    # should not surface or choose the team tools).
+    tech_catalog_enabled: bool = True
     # Per-request timeout (seconds) for the Gemini client; guards single-threaded
     # PoC requests against a hung/slow API call.
     request_timeout: float = 60.0

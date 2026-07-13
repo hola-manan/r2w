@@ -76,7 +76,12 @@ class TechCatalog:
 
 @lru_cache
 def load_catalog() -> TechCatalog:
-    """Singleton catalog over `docs/*.md`. Empty (never raises) if the folder is absent."""
+    """Singleton catalog over `docs/*.md`. Empty (never raises) if disabled via
+    settings (TECH_CATALOG_ENABLED=false) or the folder is absent."""
+    from app.config import get_settings
+
+    if not get_settings().tech_catalog_enabled:
+        return TechCatalog([])
     d = docs_dir()
     items: list[TechCapability] = []
     if d.exists():

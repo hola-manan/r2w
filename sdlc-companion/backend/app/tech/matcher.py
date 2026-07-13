@@ -16,6 +16,10 @@ from app.tech.schema import TechMatch, TechMatchOutput
 
 log = logging.getLogger(__name__)
 
+# A team tool is only surfaced when the matcher marks it recommended AND scores it at least
+# this high — so unrelated (non-automation) stack turns show no team-tool ranking at all.
+_FIT_THRESHOLD = 60
+
 _SYSTEM = (
     "You match a software delivery task to the team's automation / low-code tools, using ONLY "
     "the capability docs provided. Score each listed tool 0-100 for how well it fits THIS task, "
@@ -97,5 +101,9 @@ def rank_tools(llm, task_text: str) -> Ranking:
         out = TechMatcher(llm).match(task_text, catalog)
     except Exception as exc:  # noqa: BLE001 - matching is advisory; never break the stack turn
         log.warning("tech match skipped: %s", exc)
+        return Ranking()
+    # Stay silent unless a team tool is a genuine fit for this task, so unrelated
+    # (non-automation) stack turns aren't cluttered with a low-scoring ranking.
+    if not any(m.recommended and m.score >= _FIT_THRESHOLD for m in out.matches):
         return Ranking()
     return Ranking(matches=out.matches, summary=out.summary)

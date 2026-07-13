@@ -107,7 +107,8 @@ class ReadinessEngine:
         weighted_soft = weighted / total_w
 
         hard_results = [r for r in results if r.kind == "hard"]
-        blockers = [r.name for r in hard_results if r.level < 3]
+        # A hard dimension advances at amber (L2) or better; only red (L0-L1) blocks the gate.
+        blockers = [r.name for r in hard_results if r.level < 2]
         gate_passed = (not blockers) and weighted_soft >= rubric.threshold
 
         followups = [r.followup_question for r in results if r.level < 3 and r.followup_question]

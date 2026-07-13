@@ -80,6 +80,10 @@ class LLMClient:
             system_instruction=system or None,
             temperature=temperature,
             max_output_tokens=max_tokens,
+            # gemini-2.5-* enable "thinking" by default, which spends the output-token budget
+            # on reasoning and truncates our structured JSON mid-object. These agents/engines
+            # emit structured output at temperature 0 and don't need it, so disable it.
+            thinking_config=types.ThinkingConfig(thinking_budget=0),
             **extra,
         )
 
@@ -108,7 +112,7 @@ class LLMClient:
         *,
         system: str | None = None,
         temperature: float = 0.0,
-        max_tokens: int = 2048,
+        max_tokens: int = 8192,
         max_retries: int = 2,
     ) -> T:
         """Force the model to emit JSON matching `schema`.

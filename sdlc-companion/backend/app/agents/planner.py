@@ -36,9 +36,9 @@ class Planner(BaseAgent):
                 title=d.title, epic=d.epic, estimate=d.estimate,
                 depends_on=d.depends_on, linked_spec=d.linked_spec,
             )
-            if d.id:
-                node = ctx.repo.get(d.id).model_copy(update=payload)
-                saved = ctx.repo.upsert(node, agent=self.name)
+            existing = ctx.repo.get_optional(d.id) if d.id else None
+            if existing is not None:  # a set-but-unknown id (LLM hallucination) becomes a new node
+                saved = ctx.repo.upsert(existing.model_copy(update=payload), agent=self.name)
             else:
                 saved = ctx.repo.upsert(Task(**payload), agent=self.name)
             for sid in d.linked_spec:

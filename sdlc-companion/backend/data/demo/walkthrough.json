@@ -1,47 +1,91 @@
 {
-  "title": "Customer feedback portal (vague business request)",
-  "request": "We need a way for our customers to send us feedback and for our team to act on it. Right now feedback is scattered across email and calls and we lose track of it.",
+  "title": "Customer Complaint & Dispute Resolution Portal (EU-regulated fintech)",
+  "profile": "eu-fintech",
+  "idea": "A portal where customers file complaints/disputes and internal agents triage and resolve them under strict EU compliance. Each stage is deliberately staged: the first message leaves a gap that the readiness gate catches (Advance blocked), the second closes it (Advance passes).",
   "stages": [
     {
       "stage": 1,
       "persona": "business_user",
-      "messages": [
-        "We need a way for customers to send us feedback and for our team to act on it. Today it's scattered across email and calls and we lose track.",
-        "Customers are external end-users; the team are internal support agents. Feedback should be searchable and have a status (new, in-progress, resolved).",
-        "Success = 90% of feedback triaged within 24h, and nothing falls through the cracks. Must keep customer data compliant with our policies."
+      "steps": [
+        {
+          "expect_advanced": false,
+          "note": "Vague ask -> clarity / testability / scope read red; Advance blocked.",
+          "message": "We need to handle customer complaints better. Right now they're scattered across email and phone calls and things slip through the cracks. Can you help us figure out what to build?"
+        },
+        {
+          "expect_advanced": true,
+          "note": "Actors + flow + testable success + compliance NFR -> hard dims green; Advance passes. Creates a distinct audit/compliance requirement used to stage stage 2.",
+          "message": "Here are the specifics; please revise the requirements to be specific and testable. Actors: external customers file complaints and disputes; internal dispute agents triage and resolve them; a compliance officer reviews escalations. Flow: a customer submits a complaint with a category (billing, fraud, service) and optional attachments; the system auto-acknowledges within 1 hour; an agent moves it through statuses new -> investigating -> resolved or escalated; disputes carry a resolution SLA. Scope is strictly bounded -- please record it as an explicit scope requirement. IN SCOPE (only these): (1) complaint/dispute submission with category and attachments, (2) automatic acknowledgement, (3) agent triage and the new -> investigating -> resolved/escalated status workflow, (4) search over complaints. EXPLICITLY OUT OF SCOPE: general live chat/support, a public knowledge base, billing or payments, marketing, and any customer self-service beyond submitting and looking up their own complaints. Success metrics (measurable): 95% of complaints acknowledged within 1 hour, 90% resolved within 5 business days, and zero complaints lost. Compliance (as a separate non-functional requirement): all customer PII is stored and processed only in the EU, every status change is written to an immutable audit log, and data is encrypted at rest and in transit."
+        }
       ]
     },
     {
       "stage": 2,
       "persona": "business_user",
-      "messages": [
-        "Draft the PRD items from these requirements, with acceptance criteria and priorities."
+      "steps": [
+        {
+          "expect_advanced": false,
+          "note": "Narrowly scoped -> the compliance/audit requirement is left uncovered -> traceability (deterministic hard) red; Advance blocked.",
+          "message": "Draft PRD items for ONLY the complaint submission and the agent triage/status workflow, with acceptance criteria and priorities. Do not cover anything else yet."
+        },
+        {
+          "expect_advanced": true,
+          "note": "Cover the remaining requirement and link everything -> traceability green; Advance passes.",
+          "message": "Now add PRD items covering the remaining requirement: the immutable audit trail, EU data residency, and encryption. Also add search. Make sure every requirement is linked by at least one PRD item."
+        }
       ]
     },
     {
       "stage": 3,
       "persona": "tech_architect",
-      "messages": [
-        "Propose the technology stack for this, grounded in our company profile."
+      "steps": [
+        {
+          "expect_advanced": false,
+          "note": "Firebase is Hold under eu-fintech -> radar conflict escalation, nothing written -> no accepted ADRs -> radar_compliance + compliance_satisfaction at L0; Advance blocked.",
+          "message": "Let's start with the real-time notifications piece: use Firebase Realtime DB to push complaint status updates to our agents in real time."
+        },
+        {
+          "expect_advanced": true,
+          "note": "Approved realtime + complete, compliant stack -> radar_compliance + compliance_satisfaction green; Advance passes.",
+          "message": "Use the approved managed WebSocket for real-time instead of Firebase, and complete the rest of the stack (backend framework, frontend, auth, messaging). Make sure the ADRs together satisfy every hard compliance constraint: EU data residency (COMP-1), no third-party data sharing (COMP-2), the immutable audit log (COMP-3), and encryption (COMP-4)."
+        }
       ]
     },
     {
       "stage": 4,
       "persona": "tech_architect",
-      "messages": [
-        "Turn the PRD and ADRs into spec components with interfaces and a data model."
+      "steps": [
+        {
+          "expect_advanced": false,
+          "note": "Only one component -> other PRD items unrealized -> component_coverage (deterministic hard) red; Advance blocked.",
+          "message": "Write the spec for ONLY the complaint submission service: its responsibility, interfaces, and data model, referencing the relevant ADRs."
+        },
+        {
+          "expect_advanced": true,
+          "note": "Components for all remaining PRD items -> component_coverage + adr_alignment green; Advance passes.",
+          "message": "Now add spec components for all the remaining PRD items: the triage/status workflow, search, and the audit trail. Each must realize its PRD item(s) and reference the ADRs it depends on."
+        }
       ]
     },
     {
       "stage": 5,
       "persona": "tech_architect",
-      "messages": [
-        "Break the spec into epics, tasks, estimates, and dependencies."
+      "steps": [
+        {
+          "expect_advanced": false,
+          "note": "Only one epic -> other components untasked -> decomposition (deterministic hard) red; Advance blocked.",
+          "message": "Break down ONLY the complaint intake epic into tasks with estimates."
+        },
+        {
+          "expect_advanced": true,
+          "note": "Tasks for all remaining components -> decomposition + acyclicity green; Advance passes.",
+          "message": "Now add tasks covering all the remaining components (triage/status, search, audit trail), each with an estimate and its dependencies. Keep the dependency graph acyclic."
+        }
       ]
     }
   ],
   "profile_swap": {
-    "note": "Run the same request under 'eu-fintech' and 'startup-web'. A real-time/notification need is satisfiable with Firebase/Pusher under startup-web (Adopt), but is blocked under eu-fintech (Firebase is Hold, data must stay in EU) — producing a different, internally-consistent stack and a conflict escalation.",
-    "probe_message": "We also want instant real-time notifications to agents using Firebase Realtime DB."
+    "note": "Optional encore: the same Firebase request is ACCEPTED under 'startup-web' (Firebase is Adopt there) but escalates under 'eu-fintech' (Hold, data must stay in EU) — a different, internally-consistent stack from one profile swap.",
+    "probe_message": "For real-time notifications to agents, use Firebase Realtime DB."
   }
 }

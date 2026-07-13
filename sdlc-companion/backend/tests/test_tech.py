@@ -122,3 +122,23 @@ def test_rank_tools_degrades_to_empty_on_error():
     ranking = rank_tools(FakeLLM(), "anything")
     assert ranking.is_empty()
     assert ranking.reply_block == "" and ranking.prompt_block == ""
+
+
+def _no_fit_handler(messages, schema):
+    # Non-automation task: low scores, nothing recommended.
+    return TechMatchOutput(
+        matches=[
+            TechMatch(tool_id="alteryx", tool_name="Alteryx", score=15, rationale="not a data task"),
+            TechMatch(tool_id="uipath", tool_name="UiPath", score=10, rationale="no UI automation"),
+            TechMatch(tool_id="powerapps", tool_name="Power Apps", score=20, rationale="no app surface"),
+        ]
+    )
+
+
+def test_rank_tools_suppresses_when_no_tool_fits():
+    # When no team tool is a genuine fit, the ranking is suppressed entirely so unrelated
+    # (non-automation) stack turns show nothing about the team tools.
+    fake = FakeLLM().on("TechMatchOutput", _no_fit_handler)
+    ranking = rank_tools(fake, "build a public marketing website")
+    assert ranking.is_empty()
+    assert ranking.reply_block == "" and ranking.prompt_block == ""

@@ -35,17 +35,18 @@ class RequirementsAnalyst(BaseAgent):
 
         written: list[str] = []
         for d in out.requirements:
-            if d.id:
-                node = ctx.repo.get(d.id)
-                node = node.model_copy(
-                    update={"statement": d.statement, "req_type": d.req_type,
-                            "open_questions": d.open_questions}
+            # Follow-up questions stay in the conversational reply + the scorecard follow-ups;
+            # they are not persisted onto the node (a requirement is a finalized statement, and
+            # trailing open_questions otherwise read as "not yet testable").
+            existing = ctx.repo.get_optional(d.id) if d.id else None
+            if existing is not None:  # a set-but-unknown id (LLM hallucination) becomes a new node
+                node = existing.model_copy(
+                    update={"statement": d.statement, "req_type": d.req_type}
                 )
                 saved = ctx.repo.upsert(node, agent=self.name)
             else:
                 saved = ctx.repo.upsert(
-                    Requirement(statement=d.statement, req_type=d.req_type,
-                                open_questions=d.open_questions, source_turn=turn),
+                    Requirement(statement=d.statement, req_type=d.req_type, source_turn=turn),
                     agent=self.name,
                 )
             written.append(saved.id)

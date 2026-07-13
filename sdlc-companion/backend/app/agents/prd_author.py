@@ -38,9 +38,9 @@ class PRDAuthor(BaseAgent):
                 acceptance_criteria=d.acceptance_criteria, priority=_priority(d.priority),
                 linked_requirements=d.linked_requirements,
             )
-            if d.id:
-                node = ctx.repo.get(d.id).model_copy(update=payload)
-                saved = ctx.repo.upsert(node, agent=self.name)
+            existing = ctx.repo.get_optional(d.id) if d.id else None
+            if existing is not None:  # a set-but-unknown id (LLM hallucination) becomes a new node
+                saved = ctx.repo.upsert(existing.model_copy(update=payload), agent=self.name)
             else:
                 saved = ctx.repo.upsert(PRDItem(**payload), agent=self.name)
             for req_id in d.linked_requirements:
