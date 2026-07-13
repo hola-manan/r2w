@@ -62,7 +62,14 @@ Switch persona to **Tech Architect** at stage 3.
 
 To make the gate reliably achievable with a real, strict LLM while keeping the blocks sharp:
 - A hard dimension advances at **amber (L2)** or better; only red (L0–L1) blocks
-  (`app/engines/readiness.py`). Soft threshold is **0.5** (`app/engines/rubrics.py`).
+  (`app/engines/readiness.py`). The weighted soft score must reach **0.8**
+  (`app/engines/rubrics.py`), so the "fixing" message at each stage is written to drive the
+  soft dimensions (completeness, prioritization, failure-handling, …) green.
+- The readiness scorer (`app/engines/consistency_checker.py`) awards level 3 when the anchor
+  is *substantially* met — not only when flawless — so a genuinely good artifact can reach
+  green at the 0.8 bar. Deliberately vague or incomplete inputs still score L0–L1, so the
+  block steps hold (and the structural hard gates — traceability, coverage, decomposition —
+  are independent of the scorer and block regardless).
 - Requirements are stored as finalized statements — follow-up questions stay in the chat and
   the scorecard, not on the node (`app/agents/requirements_analyst.py`) — so a well-specified
   answer can actually reach "testable."

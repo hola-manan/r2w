@@ -15,7 +15,7 @@
         {
           "expect_advanced": true,
           "note": "Actors + flow + testable success + compliance NFR -> hard dims green; Advance passes. Creates a distinct audit/compliance requirement used to stage stage 2.",
-          "message": "Here are the specifics; please revise the requirements to be specific and testable. Actors: external customers file complaints and disputes; internal dispute agents triage and resolve them; a compliance officer reviews escalations. Flow: a customer submits a complaint with a category (billing, fraud, service) and optional attachments; the system auto-acknowledges within 1 hour; an agent moves it through statuses new -> investigating -> resolved or escalated; disputes carry a resolution SLA. Scope is strictly bounded -- please record it as an explicit scope requirement. IN SCOPE (only these): (1) complaint/dispute submission with category and attachments, (2) automatic acknowledgement, (3) agent triage and the new -> investigating -> resolved/escalated status workflow, (4) search over complaints. EXPLICITLY OUT OF SCOPE: general live chat/support, a public knowledge base, billing or payments, marketing, and any customer self-service beyond submitting and looking up their own complaints. Success metrics (measurable): 95% of complaints acknowledged within 1 hour, 90% resolved within 5 business days, and zero complaints lost. Compliance (as a separate non-functional requirement): all customer PII is stored and processed only in the EU, every status change is written to an immutable audit log, and data is encrypted at rest and in transit."
+          "message": "Here are the specifics; please revise the requirements to be specific and testable. Personas: (1) Customer -- external end-user who files and tracks their own complaints; (2) Dispute Agent -- internal staff who triage and resolve; (3) Compliance Officer -- internal reviewer of escalations. Primary flow (happy path): the customer authenticates, submits a complaint with a category (billing, fraud, service) and optional attachments, and receives an automatic acknowledgement within 1 hour; an agent is assigned and moves it through statuses new -> investigating -> resolved or escalated, with the customer notified on each status change; disputes carry a resolution SLA. Edge cases to handle explicitly: duplicate or repeat complaints from the same customer, attachments over the size limit or of an unsupported type, submissions missing a required field, and SLA breaches that must auto-escalate to the compliance officer. Scope is strictly bounded -- record it as an explicit scope requirement. IN SCOPE (only these): (1) complaint/dispute submission with category and attachments, (2) automatic acknowledgement, (3) agent triage and the new -> investigating -> resolved/escalated status workflow, (4) search over complaints. EXPLICITLY OUT OF SCOPE: general live chat/support, a public knowledge base, billing or payments, marketing, and any customer self-service beyond submitting and looking up their own complaints. Feasibility: this is feasible within our existing EU-hosted managed infrastructure (EU-region managed PostgreSQL and our standard web stack) and needs no new infrastructure or unproven technology. Success metrics (measurable): 95% of complaints acknowledged within 1 hour, 90% resolved within 5 business days, and zero complaints lost. Compliance (as a separate non-functional requirement): all customer PII is stored and processed only in the EU, every status change is written to an immutable audit log, and data is encrypted at rest and in transit. Create these as DISTINCT requirements in addition to the functional ones. PERSONAS: 'Customer -- external end-user who can submit complaints and view/track only their own'; 'Dispute Agent -- internal staff who can view, triage, and resolve any complaint and escalate to compliance'; 'Compliance Officer -- internal reviewer who handles escalated complaints'. PRIMARY FLOW: one requirement describing the end-to-end path from submission through acknowledgement, triage, status transitions, to resolution or escalation with customer notification. EDGE CASES: one requirement each for duplicate/repeat complaints, oversized or unsupported attachments, submissions missing a required field, and SLA-breach auto-escalation. SECURITY: authentication and role-based authorization matching the personas above."
         }
       ]
     },
@@ -31,7 +31,7 @@
         {
           "expect_advanced": true,
           "note": "Cover the remaining requirement and link everything -> traceability green; Advance passes.",
-          "message": "Now add PRD items covering the remaining requirement: the immutable audit trail, EU data residency, and encryption. Also add search. Make sure every requirement is linked by at least one PRD item."
+          "message": "Now add PRD items covering the remaining requirements -- immutable audit trail, EU data residency, encryption, automatic acknowledgement (sent within 1 hour of submission), and the dispute resolution SLA (target resolution within 5 business days; a complaint still unresolved after 5 business days is flagged as an SLA breach and auto-escalated to the compliance officer) -- and add search. Make sure EVERY requirement is linked by at least one PRD item, and keep the items internally consistent with no conflicting rules or timeframes. Give each PRD item concrete, testable acceptance criteria with specific thresholds (exact times, counts, and status values) and no vague terms. Assign a genuine MoSCoW priority spread: only the essential items (submission, triage/status, audit trail, EU residency, encryption) are 'must'; mark search and status notifications as 'should' and any secondary conveniences as 'could' -- do not mark everything 'must'."
         }
       ]
     },
@@ -47,7 +47,7 @@
         {
           "expect_advanced": true,
           "note": "Approved realtime + complete, compliant stack -> radar_compliance + compliance_satisfaction green; Advance passes.",
-          "message": "Use the approved managed WebSocket for real-time instead of Firebase, and complete the rest of the stack (backend framework, frontend, auth, messaging). Make sure the ADRs together satisfy every hard compliance constraint: EU data residency (COMP-1), no third-party data sharing (COMP-2), the immutable audit log (COMP-3), and encryption (COMP-4)."
+          "message": "Use the approved managed WebSocket for real-time instead of Firebase, and complete the rest of the stack with one ADR per decision point: primary datastore, backend framework, frontend, authentication, messaging, caching, and real-time. Each ADR must cite the PRD/COMP IDs it satisfies, give a clear rationale, and note the risks for any Trial-ring choice. Together the ADRs must satisfy every hard compliance constraint: EU data residency (COMP-1), no third-party data sharing (COMP-2), the immutable audit log (COMP-3), and encryption (COMP-4)."
         }
       ]
     },
@@ -63,7 +63,7 @@
         {
           "expect_advanced": true,
           "note": "Components for all remaining PRD items -> component_coverage + adr_alignment green; Advance passes.",
-          "message": "Now add spec components for all the remaining PRD items: the triage/status workflow, search, and the audit trail. Each must realize its PRD item(s) and reference the ADRs it depends on."
+          "message": "Now add spec components so that EVERY remaining PRD item is realized (linked) by at least one component -- do not leave any PRD item uncovered. This includes the triage/status workflow, search, the audit trail, automatic acknowledgement, the resolution-SLA and breach-escalation logic, EU data residency, and encryption; cover them with dedicated components or by folding them into an existing component's linked_prd. Each component must reference the ADRs it depends on and specify its interfaces and data model, and describe how it handles failures and edge cases (validation errors, retries, partial failures, SLA-breach escalation) and how it realizes the relevant NFRs (EU data residency, the immutable audit log, and encryption)."
         }
       ]
     },
@@ -79,7 +79,7 @@
         {
           "expect_advanced": true,
           "note": "Tasks for all remaining components -> decomposition + acyclicity green; Advance passes.",
-          "message": "Now add tasks covering all the remaining components (triage/status, search, audit trail), each with an estimate and its dependencies. Keep the dependency graph acyclic."
+          "message": "Now add tasks covering all the remaining components (triage/status, search, audit trail). Give each task an estimate, keep tasks reasonably sized (split anything larger than ~3 days), wire up their dependencies while keeping the graph acyclic, and call out the critical path / key blocking dependencies."
         }
       ]
     }

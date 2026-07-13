@@ -27,7 +27,7 @@ class Rubric:
     stage: int
     hard: list[Dimension]
     soft: list[tuple[Dimension, float]]
-    threshold: float = 0.5
+    threshold: float = 0.8
 
     def iter_dims(self):
         for d in self.hard:
@@ -208,31 +208,31 @@ STAGES: dict[int, Rubric] = {
         stage=1,
         hard=[_clarity, _testability, _scope],
         soft=[(_completeness, 1.0), (_feasibility, 1.0), (_nfr, 1.0), (_metrics, 1.0)],
-        threshold=0.5,
+        threshold=0.8,
     ),
     2: Rubric(
         stage=2,
         hard=[_traceability],
         soft=[(_accept_quality, 1.0), (_prioritization, 0.5), (_noncontradiction, 1.0)],
-        threshold=0.5,
+        threshold=0.8,
     ),
     3: Rubric(
         stage=3,
         hard=[_radar_compliance, _compliance_satisfaction],
         soft=[(_decision_coverage, 1.0), (_rationale, 1.0), (_risk, 0.5)],
-        threshold=0.5,
+        threshold=0.8,
     ),
     4: Rubric(
         stage=4,
         hard=[_component_coverage, _adr_alignment],
         soft=[(_interfaces, 1.0), (_data_model, 1.0), (_failure, 0.75), (_nfr_realization, 0.75)],
-        threshold=0.5,
+        threshold=0.8,
     ),
     5: Rubric(
         stage=5,
         hard=[_decomposition, _acyclicity],
         soft=[(_estimates, 1.0), (_sizing, 0.5), (_critical_path, 0.5)],
-        threshold=0.5,
+        threshold=0.8,
     ),
 }
 

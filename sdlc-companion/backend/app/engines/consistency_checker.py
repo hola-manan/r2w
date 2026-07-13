@@ -16,10 +16,11 @@ from app.engines.rubrics import Dimension
 from app.llm import LLMClient
 
 SCORE_SYSTEM = (
-    "You are a meticulous software readiness reviewer. You score ONE rubric "
-    "dimension at a time using a fixed anchored 0-3 scale. Be strict and cite "
-    "the specific artifact IDs that justify your score. Only return level 3 "
-    "when the anchor for level 3 is fully met."
+    "You are a pragmatic software readiness reviewer. You score ONE rubric "
+    "dimension at a time using a fixed anchored 0-3 scale, and cite the specific "
+    "artifact IDs that justify your score. Award level 3 when the level-3 anchor is "
+    "substantially met — minor, non-blocking nitpicks do not by themselves keep a "
+    "dimension below level 3. Reserve levels 0-1 for genuine, material gaps."
 )
 
 EDGE_SYSTEM = (
